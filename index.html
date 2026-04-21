@@ -542,42 +542,66 @@ const CF_BLOCK_PATTERNS = [
   'error 1020',
 ];
 
-async function checkUrl(url, timeoutMs) {
+async function checkUrlViaProxy(url, timeoutMs) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&timestamp=${Date.now()}`;
     const res = await fetch(proxyUrl, { signal: controller.signal });
     clearTimeout(timer);
-    if (!res.ok) return false;
+    if (!res.ok) return null; // proxy itself failed → unknown
     const data = await res.json();
 
     const httpCode = data.status?.http_code ?? 0;
-    if (httpCode < 200 || httpCode >= 300) return false;
-
     const body = (data.contents || '').toLowerCase();
 
-    // Also extract <title> for extra signal
+    // If proxy returned empty body, it couldn't reach the site → unknown
+    if (!body || body.length < 50) return null;
+
+    if (httpCode < 200 || httpCode >= 300) return false;
+
+    // Extract <title> for CF warning detection
     const titleMatch = body.match(/<title[^>]*>(.*?)<\/title>/);
     const title = titleMatch ? titleMatch[1] : '';
-
-    // Reject if title contains cloudflare + warning keywords
     if (title.includes('cloudflare') && (
-      title.includes('phishing') ||
-      title.includes('misleading') ||
-      title.includes('attention') ||
-      title.includes('blocked') ||
+      title.includes('phishing') || title.includes('misleading') ||
+      title.includes('attention') || title.includes('blocked') ||
       title.includes('just a moment')
     )) return false;
 
     for (const pattern of CF_BLOCK_PATTERNS) {
       if (body.includes(pattern)) return false;
     }
+    return true; // proxy reached it and no block patterns found
+  } catch {
+    clearTimeout(timer);
+    return null; // proxy timed out or errored → unknown
+  }
+}
+
+async function checkUrlDirect(url, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    await fetch(url, { mode: 'no-cors', signal: controller.signal });
+    clearTimeout(timer);
     return true;
   } catch {
     clearTimeout(timer);
     return false;
   }
+}
+
+async function checkUrl(url, timeoutMs) {
+  // Step 1: try via proxy (can read content, detect CF blocks)
+  const proxyResult = await checkUrlViaProxy(url, timeoutMs);
+
+  if (proxyResult === true)  return true;  // proxy confirmed: live site
+  if (proxyResult === false) return false; // proxy confirmed: CF block page
+
+  // Step 2: proxy was inconclusive (couldn't reach site itself)
+  // Fall back to direct no-cors check — at least detect network reachability
+  return await checkUrlDirect(url, Math.min(timeoutMs, 5000));
 }
 
 async function tryUrl(domain, suffix, protocol, timeoutMs) {

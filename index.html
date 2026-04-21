@@ -282,8 +282,9 @@
   @keyframes fadeIn { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: translateX(0); } }
 
   .log-entry .ts { color: var(--dim); flex-shrink: 0; font-size: 0.65rem; }
-  .log-entry .ok  { color: var(--ok); }
+  .log-entry .ok   { color: var(--ok); }
   .log-entry .fail { color: var(--fail); }
+  .log-entry .warn { color: var(--accent2); }
   .log-entry .info { color: var(--warn); }
   .log-entry .dim  { color: var(--dim); }
 
@@ -477,9 +478,6 @@ dsj261.com</textarea>
 
 <script>
 let aborted = false;
-let totalChecks = 0;
-let doneChecks = 0;
-
 const suffixes = ['', '/h5', '/h5/ios'];
 
 function switchTab(tab) {
@@ -503,164 +501,89 @@ function log(msg, cls = 'dim') {
 }
 
 function setPhase(idx, state) {
-  // state: 'active' | 'done' | ''
-  const el = document.getElementById('phase' + idx);
-  el.className = 'phase-pill ' + state;
+  document.getElementById('phase' + idx).className = 'phase-pill ' + state;
 }
 
-function updateProgress() {
-  const pct = totalChecks > 0 ? (doneChecks / totalChecks * 100) : 0;
-  document.getElementById('progressFill').style.width = pct + '%';
-}
+// ── Core check: load URL in hidden iframe, detect real SPA vs CF page ──────
+// Strategy: A real SPA triggers hash navigation (#/home etc) OR loads many
+// same-domain sub-resources. A CF warning page does neither.
+// We use two signals:
+//   1. iframe 'load' fires AND PerformanceObserver sees ≥1 request to the target domain
+//   2. fallback: just count if load fired within timeout (imperfect but works as last resort)
 
-// CF / security block indicators — checked against full page HTML (lowercased)
-const CF_BLOCK_PATTERNS = [
-  // Cloudflare interstitials
-  'just a moment',
-  'enable javascript and cookies',
-  'cf-browser-verification',
-  'cloudflare ray id',
-  'ddos protection by cloudflare',
-  'please wait while we verify',
-  'checking your browser',
-  'attention required! | cloudflare',
-  // Cloudflare warning / phishing pages
-  'suspected misleading website',
-  'suspected phishing',
-  'phishing site',
-  'reported for potentially misrepresenting',
-  'this claim has not been validated by cloudflare',
-  'ignore &amp; proceed',
-  'ignore & proceed',
-  // Cloudflare footer — appears on ALL CF error/challenge/warning pages
-  'performance & security by cloudflare',
-  'performance &amp; security by cloudflare',
-  'security by cloudflare',
-  // CF raw HTML markers
-  'cf-wrapper',
-  'cf-column',
-  'cf-error-details',
-  '__cf$cv$params',
-  'challenges.cloudflare.com',
-  // Generic block / error pages
-  'access denied',
-  'this site is blocked',
-  'your access to this site has been blocked',
-  '403 forbidden',
-  'error 1010',
-  'error 1012',
-  'error 1020',
-];
+function checkUrlViaIframe(url, timeoutMs) {
+  return new Promise(resolve => {
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-9999px;top:-9999px;';
+    iframe.sandbox = 'allow-scripts allow-same-origin';
 
-async function checkUrlViaProxy(url, timeoutMs) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&timestamp=${Date.now()}`;
-    const res = await fetch(proxyUrl, { signal: controller.signal });
-    clearTimeout(timer);
-    if (!res.ok) return null; // proxy itself failed → unknown
-    const data = await res.json();
+    let resolved = false;
+    let subResourceCount = 0;
+    let observer;
 
-    const httpCode = data.status?.http_code ?? 0;
-    const body = (data.contents || '').toLowerCase();
+    const domain = new URL(url).hostname;
 
-    // If proxy returned empty body, it couldn't reach the site → unknown, try direct
-    if (!body || body.length < 50) return null;
-    log(`  proxy1 → HTTP ${httpCode}, body[0:120]: ${body.substring(0,120).replace(/\n/g,' ')}`, 'dim');
+    // Watch for sub-resource loads from the target domain
+    // CF warning pages ONLY load resources from cloudflare.com / challenges.cloudflare.com
+    // Real SPAs load JS/CSS from the target domain itself
+    try {
+      observer = new PerformanceObserver(list => {
+        for (const entry of list.getEntries()) {
+          if (entry.name && entry.name.includes(domain) && !entry.name.includes('favicon')) {
+            subResourceCount++;
+          }
+        }
+      });
+      observer.observe({ type: 'resource', buffered: false });
+    } catch(e) { /* PerformanceObserver not available */ }
 
-    // Check body for CF block fingerprints regardless of HTTP status
-    const titleMatch = body.match(/<title[^>]*>(.*?)<\/title>/);
-    const title = titleMatch ? titleMatch[1] : '';
-    if (title.includes('cloudflare') && (
-      title.includes('phishing') || title.includes('misleading') ||
-      title.includes('attention') || title.includes('blocked') ||
-      title.includes('just a moment')
-    )) return false; // confirmed CF block page
+    const cleanup = () => {
+      try { observer && observer.disconnect(); } catch(e) {}
+      try { document.body.removeChild(iframe); } catch(e) {}
+    };
 
-    for (const pattern of CF_BLOCK_PATTERNS) {
-      if (body.includes(pattern)) return false; // confirmed CF block page
-    }
+    const done = (result) => {
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(timer);
+      cleanup();
+      resolve(result);
+    };
 
-    // If we got a 4xx/5xx but NO CF block content, the proxy may have been
-    // blocked while a real browser would get through → treat as unknown
-    if (httpCode < 200 || httpCode >= 300) return null;
+    iframe.onload = () => {
+      // Give SPA 800ms to load sub-resources and do hash navigation
+      setTimeout(() => {
+        // ≥2 sub-resources from target domain = real site
+        // 0 sub-resources = CF page (all its resources come from cloudflare.com)
+        done(subResourceCount >= 1 ? 'live' : 'cf-block');
+      }, 800);
+    };
 
-    return true; // proxy reached it, 2xx, no block patterns → live site
-  } catch {
-    clearTimeout(timer);
-    return null; // proxy timed out or errored → unknown
-  }
-}
+    iframe.onerror = () => done('dead');
 
-async function checkUrlViaProxy2(url, timeoutMs) {
-  // Second proxy: corsproxy.io — different server, different IP, better CF coverage
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(url)}`;
-    const res = await fetch(proxyUrl, { signal: controller.signal });
-    clearTimeout(timer);
-    const body = (await res.text()).toLowerCase();
-    if (!body || body.length < 50) return null;
+    const timer = setTimeout(() => done('timeout'), timeoutMs);
 
-    // Non-2xx from proxied site
-    if (!res.ok) {
-      // Still scan for CF block content even on error responses
-      for (const pattern of CF_BLOCK_PATTERNS) {
-        if (body.includes(pattern)) return false;
-      }
-      return null; // non-2xx but no CF content → inconclusive
-    }
-
-    const titleMatch = body.match(/<title[^>]*>(.*?)<\/title>/);
-    const title = titleMatch ? titleMatch[1] : '';
-    if (title.includes('cloudflare') && (
-      title.includes('phishing') || title.includes('misleading') ||
-      title.includes('attention') || title.includes('blocked') ||
-      title.includes('just a moment')
-    )) return false;
-
-    for (const pattern of CF_BLOCK_PATTERNS) {
-      if (body.includes(pattern)) return false;
-    }
-    return true;
-  } catch {
-    clearTimeout(timer);
-    return null;
-  }
-}
-
-async function checkUrl(url, timeoutMs) {
-  // Proxy 1: allorigins
-  const r1 = await checkUrlViaProxy(url, timeoutMs);
-  if (r1 === true)  return true;   // confirmed live
-  if (r1 === false) return false;  // confirmed CF block
-
-  // Proxy 2: corsproxy.io (different server/IP)
-  const r2 = await checkUrlViaProxy2(url, Math.min(timeoutMs, 6000));
-  if (r2 === true)  return true;
-  if (r2 === false) return false;
-
-  // Both proxies inconclusive → skip (safer than risking a CF-blocked redirect)
-  return false;
+    document.body.appendChild(iframe);
+    iframe.src = url;
+  });
 }
 
 async function tryUrl(domain, suffix, protocol, timeoutMs) {
-  const protos = protocol === 'both' ? ['https', 'http'] : [protocol];
-  for (const proto of protos) {
-    if (aborted) return null;
-    const url = `${proto}://${domain}${suffix}`;
-    log(`checking ${url} …`, 'dim');
-    const ok = await checkUrl(url, timeoutMs);
-    doneChecks++;
-    updateProgress();
-    if (ok) {
-      log(`✓ REACHABLE: ${url}`, 'ok');
-      return url;
-    } else {
-      log(`✗ unreachable: ${url}`, 'fail');
-    }
+  if (aborted) return null;
+  const url = `${protocol}://${domain}${suffix}`;
+  log(`checking ${url} …`, 'dim');
+
+  const result = await checkUrlViaIframe(url, timeoutMs);
+  
+  if (result === 'live') {
+    log(`✓ LIVE: ${url} (real site resources detected)`, 'ok');
+    return url;
+  } else if (result === 'cf-block') {
+    log(`⚠ CF block: ${url} (no site resources, CF warning page)`, 'warn');
+  } else if (result === 'timeout') {
+    log(`✗ timeout: ${url}`, 'fail');
+  } else {
+    log(`✗ dead: ${url}`, 'fail');
   }
   return null;
 }
@@ -711,7 +634,6 @@ async function loadDomains() {
 
 async function startScan() {
   aborted = false;
-  doneChecks = 0;
 
   document.getElementById('btnStart').disabled = true;
   document.getElementById('btnStop').disabled = false;
@@ -722,8 +644,8 @@ async function startScan() {
   document.getElementById('progressFill').style.width = '0%';
   setPhase(0, ''); setPhase(1, ''); setPhase(2, '');
 
-  const timeoutMs = parseInt(document.getElementById('timeout').value) || 5000;
-  const protocol = document.getElementById('protocol').value;
+  const timeoutMs = parseInt(document.getElementById('timeout').value) || 6000;
+  const protocol = document.getElementById('protocol').value === 'http' ? 'http' : 'https';
   const autoDelay = parseInt(document.getElementById('autoRedirect').value);
 
   let domains;
@@ -737,29 +659,30 @@ async function startScan() {
   }
 
   if (domains.length === 0) {
-    log('No domains found in list.', 'info');
+    log('No domains found.', 'info');
     document.getElementById('btnStart').disabled = false;
     document.getElementById('btnStop').disabled = true;
     return;
   }
 
-  const protoCount = protocol === 'both' ? 2 : 1;
-  totalChecks = domains.length * suffixes.length * protoCount;
-  updateProgress();
+  const total = domains.length * suffixes.length;
+  let done = 0;
 
-  log(`Loaded ${domains.length} domain(s). Starting scan…`, 'info');
-  log(`Timeout: ${timeoutMs}ms | Protocol: ${protocol}`, 'dim');
+  log(`Loaded ${domains.length} domain(s). Checking via iframe resource detection…`, 'info');
+  log(`Timeout per URL: ${timeoutMs}ms`, 'dim');
 
   for (let si = 0; si < suffixes.length; si++) {
     if (aborted) break;
     const suffix = suffixes[si];
-    const label = suffix === '' ? 'bare domain' : suffix;
     setPhase(si, 'active');
-    log(`── Phase ${si + 1}: trying ${label || 'root'} ──`, 'info');
+    log(`── Phase ${si + 1}: ${suffix || 'bare domain'} ──`, 'info');
 
     for (const domain of domains) {
       if (aborted) break;
       const found = await tryUrl(domain, suffix, protocol, timeoutMs);
+      done++;
+      document.getElementById('progressFill').style.width = (done / total * 100) + '%';
+
       if (found) {
         for (let j = 0; j <= si; j++) setPhase(j, 'done');
         log(`\n✓ Found working site: ${found}`, 'ok');
@@ -769,15 +692,14 @@ async function startScan() {
         return;
       }
     }
-
     setPhase(si, 'done');
   }
 
   if (!aborted) {
-    log('All phases complete. No reachable site found.', 'fail');
+    log('All phases complete. No live site found.', 'fail');
     document.getElementById('noResult').style.display = 'block';
   } else {
-    log('Scan aborted by user.', 'info');
+    log('Scan stopped.', 'info');
   }
 
   document.getElementById('btnStart').disabled = false;

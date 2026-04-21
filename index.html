@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Site Finder</title>
+<title>DSJ Exchange Redirector</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
 
@@ -385,7 +385,7 @@
 <body>
 
 <div class="header">
-  <h1>⚡ Site Finder</h1>
+  <h1>⚡ DSJ Exchange Redirector</h1>
   <p>Auto-scans mirrors &amp; redirects to first live site</p>
 </div>
 
@@ -402,7 +402,7 @@
     <div class="config-row">
       <label>List URL:</label>
       <input type="text" id="listUrl"
-        placeholder="https://raw.githubusercontent.com/.../domains.txt"
+        placeholder="https://chaudohoang.github.io/site-finder/domains.txt"
         value="https://chaudohoang.github.io/site-finder/domains.txt" />
     </div>
     <div style="padding: 0 16px 8px; font-size: 0.67rem; color: var(--dim);">
@@ -513,12 +513,40 @@ function updateProgress() {
   document.getElementById('progressFill').style.width = pct + '%';
 }
 
+// CF block indicators found in page body
+const CF_BLOCK_PATTERNS = [
+  'just a moment',
+  'enable javascript and cookies',
+  'cf-browser-verification',
+  'suspected misleading website',
+  'reported for potentially misrepresenting',
+  'cloudflare ray id',
+  'please wait while we verify',
+  'checking your browser',
+  'ddos protection by cloudflare',
+  'attention required! | cloudflare',
+];
+
 async function checkUrl(url, timeoutMs) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    await fetch(url, { mode: 'no-cors', signal: controller.signal });
+    // Use allorigins proxy so we can read the actual response body + status
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&timestamp=${Date.now()}`;
+    const res = await fetch(proxyUrl, { signal: controller.signal });
     clearTimeout(timer);
+    if (!res.ok) return false;
+    const data = await res.json();
+
+    const httpCode = data.status?.http_code ?? 0;
+    // Reject non-2xx responses
+    if (httpCode < 200 || httpCode >= 300) return false;
+
+    // Scan body for CF block fingerprints
+    const body = (data.contents || '').toLowerCase();
+    for (const pattern of CF_BLOCK_PATTERNS) {
+      if (body.includes(pattern)) return false;
+    }
     return true;
   } catch {
     clearTimeout(timer);

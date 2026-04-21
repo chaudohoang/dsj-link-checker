@@ -3,19 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DSJ Exchange Redirector</title>
+<title>DSJ Exchange Link Checker</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@600;700&display=swap');
-  :root {
-    --bg:#0a0c10;--bg2:#0f1318;--border:#1e2730;
-    --accent:#00e5ff;--ok:#39ff14;--fail:#ff3b3b;--warn:#ffcc00;
-    --text:#c8d8e8;--dim:#4a6070;
-  }
+  :root{--bg:#0a0c10;--bg2:#0f1318;--border:#1e2730;--accent:#00e5ff;--ok:#39ff14;--fail:#ff3b3b;--warn:#ffcc00;--accent2:#ff6b35;--text:#c8d8e8;--dim:#4a6070}
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px}
   h1{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:2rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);text-shadow:0 0 20px rgba(0,229,255,.4);text-align:center}
   .sub{font-size:.72rem;color:var(--dim);margin:6px 0 28px;letter-spacing:.1em;text-align:center}
-  .card{width:100%;max-width:680px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:18px}
+  .card{width:100%;max-width:700px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:18px}
   .card-title{background:rgba(0,229,255,.05);border-bottom:1px solid var(--border);padding:9px 14px;font-size:.68rem;letter-spacing:.18em;color:var(--accent);text-transform:uppercase;display:flex;align-items:center;gap:8px}
   .card-title::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);flex-shrink:0}
   .row{display:flex;gap:10px;padding:12px 14px;align-items:center;flex-wrap:wrap}
@@ -24,49 +20,45 @@
   input[type=text]:focus{border-color:var(--accent)}
   textarea{width:100%;background:#080b0e;border:1px solid var(--border);border-radius:4px;padding:9px 10px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.76rem;resize:vertical;outline:none;min-height:90px;line-height:1.6}
   textarea:focus{border-color:var(--accent)}
-  .pad{padding:0 14px 12px}
-  .hint{font-size:.66rem;color:var(--dim);padding:0 14px 10px}
+  .pad{padding:0 14px 12px}.hint{font-size:.66rem;color:var(--dim);padding:0 14px 10px}
   .tab-btn{background:transparent;border:1px solid var(--border);color:var(--dim);padding:4px 12px;font-family:'Share Tech Mono',monospace;font-size:.66rem;border-radius:3px;cursor:pointer;letter-spacing:.08em}
   .tab-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,.05)}
   .tab-panel{display:none}.tab-panel.active{display:block}
   button.primary{background:var(--accent);color:#000;font-family:'Share Tech Mono',monospace;font-size:.78rem;font-weight:bold;letter-spacing:.1em;border:none;border-radius:4px;padding:9px 22px;cursor:pointer;text-transform:uppercase;transition:all .15s}
-  button.primary:hover{box-shadow:0 0 12px rgba(0,229,255,.5);transform:translateY(-1px)}
-  button.primary:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+  button.primary:hover{box-shadow:0 0 12px rgba(0,229,255,.5)}
+  button.primary:disabled{opacity:.4;cursor:not-allowed}
   button.sec{background:transparent;border:1px solid var(--dim);color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:.76rem;border-radius:4px;padding:8px 16px;cursor:pointer;letter-spacing:.08em}
   button.sec:hover{border-color:var(--text);color:var(--text)}
+  /* Progress */
 
-  /* URL list */
-  .url-list{padding:0 14px 14px;display:flex;flex-direction:column;gap:6px}
-  .url-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:4px;border:1px solid var(--border);background:#080b0e;transition:all .2s;cursor:pointer;animation:fadeIn .2s ease}
-  .url-row:hover{border-color:var(--accent);background:rgba(0,229,255,.03)}
-  .url-row.current{border-color:var(--warn);background:rgba(255,204,0,.05);box-shadow:0 0 8px rgba(255,204,0,.15)}
-  .url-row.opened{border-color:var(--dim)}
-  .url-num{font-size:.66rem;color:var(--dim);width:20px;flex-shrink:0;text-align:right}
-  .url-text{flex:1;font-size:.76rem;color:var(--text);word-break:break-all}
-  .url-row.current .url-text{color:var(--warn)}
-  .url-badge{font-size:.6rem;padding:2px 7px;border-radius:2px;border:1px solid;flex-shrink:0}
-  .badge-curr{border-color:var(--warn);color:var(--warn)}
-  .badge-open{border-color:var(--dim);color:var(--dim)}
-  .badge-new{border-color:var(--ok);color:var(--ok)}
-  .open-btn{background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:.66rem;padding:3px 10px;border-radius:3px;cursor:pointer;white-space:nowrap;flex-shrink:0}
-  .open-btn:hover{background:rgba(0,229,255,.1)}
-  .next-btn-wrap{padding:0 14px 14px;display:flex;gap:10px;align-items:center}
-  .next-big{background:var(--ok);color:#000;font-family:'Share Tech Mono',monospace;font-weight:bold;font-size:.82rem;letter-spacing:.1em;border:none;border-radius:4px;padding:10px 28px;cursor:pointer;text-transform:uppercase;transition:all .15s;animation:pulse 1.5s infinite}
-  .next-big:hover{box-shadow:0 0 16px rgba(57,255,20,.5);transform:translateY(-1px)}
-  @keyframes pulse{0%,100%{box-shadow:0 0 6px rgba(57,255,20,.3)}50%{box-shadow:0 0 16px rgba(57,255,20,.7)}}
-  @keyframes fadeIn{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:translateX(0)}}
-  .status-bar{font-size:.7rem;color:var(--dim);padding:8px 14px;border-top:1px solid var(--border)}
-  .exhausted{padding:14px;text-align:center;color:var(--fail);font-size:.78rem}
+  .prog-wrap{height:3px;background:var(--border);margin:10px 14px;border-radius:2px;overflow:hidden}
+  .prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--ok));width:0%;transition:width .3s}
+  /* Log */
+  .log-wrap{padding:0 14px 14px;max-height:260px;overflow-y:auto}
+  .log-wrap::-webkit-scrollbar{width:4px}
+  .log-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  .log-entry{font-size:.7rem;line-height:1.7;display:flex;gap:8px;align-items:center;animation:fadeIn .2s ease}
+  .log-entry .log-text{flex:1}
+  .log-open{background:transparent;border:1px solid var(--dim);color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:.6rem;padding:1px 8px;border-radius:3px;cursor:pointer;white-space:nowrap;flex-shrink:0;letter-spacing:.06em;text-decoration:none;transition:all .15s}
+  .log-open:hover{border-color:var(--accent);color:var(--accent)}
+  .log-open.live{border-color:var(--ok);color:var(--ok)}
+  .log-open.live:hover{background:rgba(57,255,20,.1)}
+  .log-open.blocked{border-color:var(--fail);color:var(--fail)}
+  .log-open.blocked:hover{background:rgba(255,59,59,.1)}
+  .ts{color:var(--dim);flex-shrink:0;font-size:.63rem}
+  .ok{color:var(--ok)}.fail{color:var(--fail)}.warn{color:var(--accent2)}.info{color:var(--warn)}.dim{color:var(--dim)}
+  @keyframes fadeIn{from{opacity:0;transform:translateX(-3px)}to{opacity:1;transform:translateX(0)}}
+
+  #noResult{display:none;padding:14px;text-align:center;color:var(--fail);font-size:.76rem}
 </style>
 </head>
 <body>
 
-<h1>⚡ DSJ Exchange Redirector</h1>
-<p class="sub">Finds a working mirror & opens it for you</p>
+<h1>⚡ DSJ Exchange Link Checker</h1>
+<p class="sub">Checks all mirrors &amp; shows which ones are live</p>
 
-<!-- Config -->
-<div class="card" id="configCard">
-  <div class="card-title">Source</div>
+<div class="card">
+  <div class="card-title">Source Configuration</div>
   <div class="row">
     <label>List from:</label>
     <button class="tab-btn active" id="tabUrl" onclick="switchTab('url')">Remote URL</button>
@@ -83,7 +75,7 @@
   </div>
   <div class="tab-panel" id="panelInline">
     <div class="pad">
-      <textarea id="inlineDomains" placeholder="dsj255.com&#10;dsj256.com&#10;dsj257.com">dsj255.com
+      <textarea id="inlineDomains" placeholder="dsj255.com&#10;dsj256.com">dsj255.com
 dsj256.com
 dsj257.com
 dsj259.com
@@ -92,42 +84,210 @@ dsj261.com</textarea>
     </div>
   </div>
   <div class="row">
-    <button class="primary" id="btnLoad" onclick="loadAndShow()">▶ Load Sites</button>
+    <button class="primary" id="btnStart" onclick="startScan()">▶ Start Scan</button>
+    <button class="sec" id="btnStop" onclick="stopScan()" disabled>■ Stop</button>
     <button class="sec" onclick="resetAll()">↺ Reset</button>
   </div>
 </div>
 
-<!-- Site list -->
-<div class="card" id="listCard" style="display:none">
-  <div class="card-title">Candidates — try in order</div>
-  <div class="url-list" id="urlList"></div>
-  <div class="next-btn-wrap" id="nextWrap" style="display:none">
-    <button class="next-big" id="btnNext" onclick="openNext()">→ Blocked? Try Next</button>
-    <span style="font-size:.68rem;color:var(--dim)" id="nextLabel"></span>
-  </div>
-  <div class="status-bar" id="statusBar"></div>
-  <div class="exhausted" id="exhausted" style="display:none">
-    ✗ All candidates tried. Update the domain list and reload.
-  </div>
+<div class="card" id="progressCard" style="display:none">
+  <div class="card-title">Scan Progress</div>
+
+  <div style="display:flex;align-items:center;gap:8px;padding:0 14px;margin-bottom:4px"><div class="prog-wrap" style="flex:1;margin:0"><div class="prog-fill" id="progFill"></div></div><span id="progPct" style="font-size:.68rem;color:var(--dim);white-space:nowrap;min-width:36px;text-align:right">0%</span></div>
+  <div class="log-wrap" id="logWrap"></div>
+  <div id="noResult" style="display:none;padding:10px 14px 14px;font-size:.72rem"></div>
 </div>
 
 <script>
-let candidates = [];   // {url, el}
-let currentIdx = -1;
+let aborted = false;
+const suffixes = ['/h5/ios', '/h5', ''];
 
-function switchTab(tab) {
-  document.getElementById('panelUrl').classList.toggle('active', tab === 'url');
-  document.getElementById('panelInline').classList.toggle('active', tab === 'inline');
-  document.getElementById('tabUrl').classList.toggle('active', tab === 'url');
-  document.getElementById('tabInline').classList.toggle('active', tab === 'inline');
+const LIVE_PATTERNS  = ['static/h5/second/', 'chart-loading-animation'];
+const BLOCK_PATTERNS = [
+  'id="cf-wrapper"', "id='cf-wrapper'",
+  '/cdn-cgi/phish-bypass', '/cdn-cgi/styles/cf.errors',
+  'challenges.cloudflare.com/turnstile',
+  'suspected misleading website', 'suspected phishing site',
+  'reported for potentially misrepresenting',
+  'this claim has not been validated by cloudflare',
+  'ignore & proceed', 'ignore &amp; proceed',
+  'just a moment', 'cf-browser-verification',
+  'cloudflare ray id', 'ddos protection by cloudflare',
+  'performance &amp; security by cloudflare',
+  'performance & security by cloudflare',
+];
+
+function switchTab(t) {
+  ['url','inline'].forEach(x => {
+    document.getElementById('panel'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active', x===t);
+    document.getElementById('tab'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active', x===t);
+  });
+}
+function ts() { return new Date().toLocaleTimeString('en-GB',{hour12:false}); }
+let _deferredLogs = [];
+
+function makeEntry(msg, cls, url) {
+  const el = document.createElement('div');
+  el.className = 'log-entry';
+  const btn = url ? '<a class="log-open live" href="' + url + '" target="_blank">open</a>' : '';
+  el.innerHTML = '<span class="ts">[' + ts() + ']</span>'
+    + '<span class="log-text ' + (cls||'dim') + '">' + msg + '</span>' + btn;
+  return el;
+}
+function log(msg, cls) {
+  const w = document.getElementById('logWrap');
+  w.appendChild(makeEntry(msg, cls||'dim', null));
+  w.scrollTop = w.scrollHeight;
+}
+function logLive(msg, url) {
+  const w = document.getElementById('logWrap');
+  const el = makeEntry(msg, 'ok', url);
+  const first = w.querySelector('.deferred');
+  if (first) w.insertBefore(el, first); else w.appendChild(el);
+  w.scrollTop = 0;
+}
+function logDeferred(msg, cls, url) { _deferredLogs.push({msg, cls: cls||'dim', url: url||null}); }
+function flushDeferred() {
+  const w = document.getElementById('logWrap');
+  if (!_deferredLogs.length) return;
+  w.appendChild(makeEntry('── other results ───────────────────────', 'dim', null));
+  _deferredLogs.forEach(d => {
+    const el = makeEntry(d.msg, d.cls, d.url || null);
+    if (d.url) el.querySelector('.log-open').classList.add('blocked');
+    el.classList.add('deferred');
+    w.appendChild(el);
+  });
+  _deferredLogs = [];
+  w.scrollTop = 0;
+}
+function setProgress(n, t) {
+  const pct = t > 0 ? Math.round(n/t*100) : 0;
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progPct').textContent = pct + '%';
+}
+
+function classify(html) {
+  const b = html.toLowerCase();
+  for (const p of LIVE_PATTERNS)  if (b.includes(p)) return 'live';
+  for (const p of BLOCK_PATTERNS) if (b.includes(p)) return 'blocked';
+  return 'unknown';
+}
+
+// ── Method 1: Direct CORS fetch (works if site has CORS headers) ─────────────
+async function tryDirect(url, ms) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
+    clearTimeout(t);
+    const text = await r.text();
+    if (text.length > 50) return classify(text);
+  } catch {}
+  clearTimeout(t);
+  return 'unknown';
+}
+
+// ── Method 2: Proxy (reads HTML, detects CF or DSJ content) ─────────────────
+async function tryProxy(proxyUrl, ms) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const r = await fetch(proxyUrl, { signal: ctrl.signal });
+    clearTimeout(t);
+    if (!r.ok) return 'unknown';
+    const text = await r.text();
+    if (text.length > 50) return classify(text);
+  } catch {}
+  clearTimeout(t);
+  return 'unknown';
+}
+
+// ── Method 3: Image probe using CORRECT relative path ───────────────────────
+// GIF is at ./chart-loading-animation.gif from the page.
+// ./foo relative to https://domain/h5/ios  = /h5/chart-loading-animation.gif
+// ./foo relative to https://domain/h5      = /chart-loading-animation.gif
+// ./foo relative to https://domain/        = /chart-loading-animation.gif
+// CF blocks the HTML page but allows static files at that path → false positive risk.
+// So we use image probe ONLY as a tiebreaker with known-path awareness.
+function gifProbe(url, ms) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const u = new URL(url);
+    // Compute correct relative path for ./chart-loading-animation.gif
+    const segments = u.pathname.replace(/\/$/, '').split('/');
+    segments.pop(); // go up one directory (like ./ does)
+    const gifPath = segments.join('/') + '/chart-loading-animation.gif';
+    const probe = u.origin + gifPath + '?_=' + Date.now();
+    let done = false;
+    const fin = r => { if (!done) { done=true; img.src=''; resolve(r); } };
+    const timer = setTimeout(() => fin('timeout'), ms);
+    img.onload  = () => { clearTimeout(timer); fin('live'); };
+    img.onerror = () => { clearTimeout(timer); fin('blocked'); };
+    img.src = probe;
+  });
+}
+
+// ── Combined check ────────────────────────────────────────────────────────────
+async function checkUrl(url, timeoutMs) {
+  const enc = encodeURIComponent(url);
+  const ts  = Date.now();
+
+  // Fire ALL methods simultaneously
+  const [direct, p1, p2, p3, gif] = await Promise.all([
+    tryDirect(url, timeoutMs),
+    tryProxy(`https://api.allorigins.win/get?url=${enc}&t=${ts}`, timeoutMs).then(async (r) => {
+      // allorigins wraps in JSON
+      if (r !== 'unknown') return r;
+      return 'unknown';
+    }),
+    tryProxy(`https://corsproxy.io/?url=${enc}`, timeoutMs),
+    tryProxy(`https://api.codetabs.com/v1/proxy?quest=${enc}`, timeoutMs),
+    gifProbe(url, timeoutMs),
+  ]);
+
+  // allorigins needs special JSON parsing - redo it properly
+  const allOriginsResult = await (async () => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const r = await fetch(`https://api.allorigins.win/get?url=${enc}&t=${ts+1}`, { signal: ctrl.signal });
+      clearTimeout(t);
+      if (!r.ok) return 'unknown';
+      const data = await r.json();
+      const body = data.contents || '';
+      if (body.length > 50) return classify(body);
+    } catch {}
+    clearTimeout(t);
+    return 'unknown';
+  })();
+
+  const results = [direct, allOriginsResult, p2, p3, gif];
+  const labels  = ['direct', 'allorigins', 'corsproxy', 'codetabs', 'gif'];
+
+  // Three-way verdict:
+  // 'live'    = a proxy confirmed real DSJ content in HTML
+  // 'cf-warn' = a proxy reached the site but got a CF warning page (may work from user's browser)
+  // 'dead'    = all methods timed out / got empty responses (truly unreachable)
+  const contentReaders = [direct, allOriginsResult, p2, p3];
+  const anyLive    = contentReaders.some(r => r === 'live');
+  const anyBlocked = contentReaders.some(r => r === 'blocked');
+  const anyRead    = contentReaders.some(r => r !== 'unknown');
+
+  let verdict;
+  if (anyLive)         verdict = 'live';
+  else if (anyBlocked) verdict = 'blocked';  // proxy confirmed CF page
+  else                 verdict = 'dead';     // nothing responded at all
+
+
+
+  return verdict;
 }
 
 async function loadDomains() {
   const tab = document.querySelector('.tab-btn.active').id;
-  if (tab === 'tabInline') {
+  if (tab === 'tabInline')
     return document.getElementById('inlineDomains').value
       .split('\n').map(d=>d.trim()).filter(d=>d&&!d.startsWith('#'));
-  }
   const url = document.getElementById('listUrl').value.trim();
   if (!url) throw new Error('Enter a URL or switch to Inline');
   const res = await fetch(url);
@@ -135,124 +295,89 @@ async function loadDomains() {
   return (await res.text()).split('\n').map(d=>d.trim()).filter(d=>d&&!d.startsWith('#'));
 }
 
-async function loadAndShow() {
-  const btn = document.getElementById('btnLoad');
-  btn.disabled = true; btn.textContent = 'Loading…';
+async function startScan() {
+  aborted = false;
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnStop').disabled = false;
+  document.getElementById('progressCard').style.display = 'block';
+  document.getElementById('logWrap').innerHTML = ''; _deferredLogs = [];
+  document.getElementById('noResult').style.display = 'none';
+  document.getElementById('progFill').style.width = '0%'; document.getElementById('progPct').textContent = '0%';
+
+  const timeoutMs = 8000;
 
   let domains;
   try { domains = await loadDomains(); }
-  catch(e) { alert('Could not load domain list: ' + e.message); btn.disabled=false; btn.textContent='▶ Load Sites'; return; }
+  catch(e) { log('Error: '+e.message,'warn'); document.getElementById('btnStart').disabled=false; document.getElementById('btnStop').disabled=true; return; }
 
-  // Build candidate list: bare → /h5 → /h5/ios for each domain
-  const suffixes = ['', '/h5', '/h5/ios'];
-  candidates = [];
-  const listEl = document.getElementById('urlList');
-  listEl.innerHTML = '';
+  const candidates = [];
+  for (let si = 0; si < suffixes.length; si++)
+    for (const domain of domains)
+      candidates.push({ url: `https://${domain}${suffixes[si]}`, phase: si });
 
-  let n = 1;
-  for (const suffix of suffixes) {
-    for (const domain of domains) {
-      const url = `https://${domain}${suffix}`;
-      const row = document.createElement('div');
-      row.className = 'url-row';
-      row.innerHTML = `
-        <span class="url-num">${n}</span>
-        <span class="url-text">${url}</span>
-        <button class="open-btn" onclick="openUrl(${candidates.length})">Open</button>`;
-      listEl.appendChild(row);
-      candidates.push({ url, el: row, opened: false });
-      n++;
-    }
-  }
-
-  document.getElementById('listCard').style.display = 'block';
-  document.getElementById('configCard').style.display = 'none';
-
-  // Auto-open the first one
-  openNext();
-}
-
-function openUrl(idx) {
-  const c = candidates[idx];
-  if (!c) return;
-
-  // Deactivate previous current
-  if (currentIdx >= 0 && candidates[currentIdx]) {
-    const prev = candidates[currentIdx];
-    prev.el.className = 'url-row opened';
-    prev.el.querySelector('.url-text').style.color = '';
-    const oldBadge = prev.el.querySelector('.url-badge');
-    if (oldBadge) oldBadge.remove();
-    addBadge(prev.el, 'OPENED', 'badge-open');
-  }
-
-  currentIdx = idx;
-  c.opened = true;
-
-  // Highlight current
-  c.el.className = 'url-row current';
-  const oldBadge = c.el.querySelector('.url-badge');
-  if (oldBadge) oldBadge.remove();
-  addBadge(c.el, '← NOW', 'badge-curr');
-
-  // Open in new tab
-  window.open(c.url, '_blank');
-
-  updateStatus();
-}
-
-function openNext() {
-  const next = candidates.findIndex((c, i) => i > currentIdx);
-  if (next === -1) {
-    // Try from beginning if all opened, or show exhausted
-    const notOpened = candidates.findIndex(c => !c.opened);
-    if (notOpened === -1) {
-      document.getElementById('exhausted').style.display = 'block';
-      document.getElementById('nextWrap').style.display = 'none';
-      return;
-    }
-    openUrl(notOpened);
-  } else {
-    openUrl(next);
-  }
-}
-
-function addBadge(row, text, cls) {
-  const b = document.createElement('span');
-  b.className = 'url-badge ' + cls;
-  b.textContent = text;
-  row.insertBefore(b, row.querySelector('.open-btn'));
-}
-
-function updateStatus() {
-  const opened = candidates.filter(c => c.opened).length;
   const total = candidates.length;
-  const remaining = total - currentIdx - 1;
-  document.getElementById('statusBar').textContent =
-    `Opened ${opened} of ${total} candidates  •  ${remaining} remaining`;
+  let completed = 0;
+  setProgress(0, total);
 
-  const nextWrap = document.getElementById('nextWrap');
-  const nextLabel = document.getElementById('nextLabel');
 
-  if (currentIdx < total - 1) {
-    nextWrap.style.display = 'flex';
-    const next = candidates[currentIdx + 1];
-    nextLabel.textContent = `next: ${next ? next.url : ''}`;
+  const results = new Array(total).fill(null);
+  let winner = null;
+
+
+  const promises = candidates.map((c, i) =>
+    checkUrl(c.url, timeoutMs).then(verdict => {
+      if (aborted) return;
+      results[i] = verdict;
+      completed++;
+      setProgress(completed, total);
+
+      const icon = verdict === 'live' ? '✓' : verdict === 'blocked' ? '⚠' : '✗';
+      const cls  = verdict === 'live' ? 'ok'  : verdict === 'blocked' ? 'warn' : 'fail';
+      if (verdict === 'live') logLive('✓ [live] ' + c.url, c.url);
+      else logDeferred(icon + ' [' + verdict + '] ' + c.url, cls, c.url);
+
+      if (!winner) {
+        for (let j = 0; j < total; j++) {
+          if (results[j] === null) break;
+          if (results[j] === 'live') { winner = candidates[j].url; break; }
+        }
+      }
+    })
+  );
+
+  await Promise.all(promises);
+
+  if (!winner && !aborted)
+    for (let j = 0; j < total; j++)
+      if (results[j] === 'live') { winner = candidates[j].url; break; }
+
+  flushDeferred();
+
+  if (aborted) {
+    log('Scan stopped.', 'info');
+  } else if (winner) {
   } else {
-    nextWrap.style.display = 'none';
-    document.getElementById('exhausted').style.display = 'block';
+    const blockedCount = results.filter(r => r === 'blocked').length;
+    const noR = document.getElementById('noResult');
+    noR.textContent = blockedCount > 0
+      ? 'No live site found. ' + blockedCount + ' URL(s) are CF-blocked.'
+      : 'No live site found — all URLs appear unreachable.';
+    noR.style.color = 'var(--fail)';
+    noR.style.display = 'block';
   }
+
+  document.getElementById('btnStart').disabled = false;
+  document.getElementById('btnStop').disabled = true;
 }
 
+function stopScan() { aborted=true; document.getElementById('btnStop').disabled=true; document.getElementById('btnStart').disabled=false; }
 function resetAll() {
-  candidates = [];
-  currentIdx = -1;
-  document.getElementById('listCard').style.display = 'none';
-  document.getElementById('configCard').style.display = 'block';
-  document.getElementById('urlList').innerHTML = '';
-  document.getElementById('exhausted').style.display = 'none';
-  document.getElementById('btnLoad').disabled = false;
-  document.getElementById('btnLoad').textContent = '▶ Load Sites';
+  aborted=true;
+  document.getElementById('progressCard').style.display='none';
+  document.getElementById('logWrap').innerHTML='';
+  document.getElementById('progFill').style.width='0%';
+  document.getElementById('btnStart').disabled=false;
+  document.getElementById('btnStop').disabled=true;
 }
 </script>
 </body>

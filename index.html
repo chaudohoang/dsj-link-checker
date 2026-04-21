@@ -5,416 +5,85 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DSJ Exchange Redirector</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
-
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@600;700&display=swap');
   :root {
-    --bg: #0a0c10;
-    --bg2: #0f1318;
-    --border: #1e2730;
-    --accent: #00e5ff;
-    --accent2: #ff6b35;
-    --ok: #39ff14;
-    --fail: #ff3b3b;
-    --warn: #ffcc00;
-    --text: #c8d8e8;
-    --dim: #4a6070;
+    --bg:#0a0c10;--bg2:#0f1318;--border:#1e2730;
+    --accent:#00e5ff;--ok:#39ff14;--fail:#ff3b3b;--warn:#ffcc00;
+    --text:#c8d8e8;--dim:#4a6070;
   }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px}
+  h1{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:2rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);text-shadow:0 0 20px rgba(0,229,255,.4);text-align:center}
+  .sub{font-size:.72rem;color:var(--dim);margin:6px 0 28px;letter-spacing:.1em;text-align:center}
+  .card{width:100%;max-width:680px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:18px}
+  .card-title{background:rgba(0,229,255,.05);border-bottom:1px solid var(--border);padding:9px 14px;font-size:.68rem;letter-spacing:.18em;color:var(--accent);text-transform:uppercase;display:flex;align-items:center;gap:8px}
+  .card-title::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);flex-shrink:0}
+  .row{display:flex;gap:10px;padding:12px 14px;align-items:center;flex-wrap:wrap}
+  label{font-size:.7rem;color:var(--dim);white-space:nowrap}
+  input[type=text]{flex:1;min-width:180px;background:#080b0e;border:1px solid var(--border);border-radius:4px;padding:6px 10px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.76rem;outline:none;transition:border-color .2s}
+  input[type=text]:focus{border-color:var(--accent)}
+  textarea{width:100%;background:#080b0e;border:1px solid var(--border);border-radius:4px;padding:9px 10px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.76rem;resize:vertical;outline:none;min-height:90px;line-height:1.6}
+  textarea:focus{border-color:var(--accent)}
+  .pad{padding:0 14px 12px}
+  .hint{font-size:.66rem;color:var(--dim);padding:0 14px 10px}
+  .tab-btn{background:transparent;border:1px solid var(--border);color:var(--dim);padding:4px 12px;font-family:'Share Tech Mono',monospace;font-size:.66rem;border-radius:3px;cursor:pointer;letter-spacing:.08em}
+  .tab-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,.05)}
+  .tab-panel{display:none}.tab-panel.active{display:block}
+  button.primary{background:var(--accent);color:#000;font-family:'Share Tech Mono',monospace;font-size:.78rem;font-weight:bold;letter-spacing:.1em;border:none;border-radius:4px;padding:9px 22px;cursor:pointer;text-transform:uppercase;transition:all .15s}
+  button.primary:hover{box-shadow:0 0 12px rgba(0,229,255,.5);transform:translateY(-1px)}
+  button.primary:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+  button.sec{background:transparent;border:1px solid var(--dim);color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:.76rem;border-radius:4px;padding:8px 16px;cursor:pointer;letter-spacing:.08em}
+  button.sec:hover{border-color:var(--text);color:var(--text)}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Share Tech Mono', monospace;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 40px 20px;
-  }
-
-  .header {
-    text-align: center;
-    margin-bottom: 36px;
-  }
-
-  .header h1 {
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 700;
-    font-size: 2.2rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--accent);
-    text-shadow: 0 0 20px rgba(0,229,255,0.4);
-  }
-
-  .header p {
-    font-size: 0.75rem;
-    color: var(--dim);
-    margin-top: 6px;
-    letter-spacing: 0.1em;
-  }
-
-  .card {
-    width: 100%;
-    max-width: 720px;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    overflow: hidden;
-    margin-bottom: 20px;
-  }
-
-  .card-title {
-    background: rgba(0,229,255,0.05);
-    border-bottom: 1px solid var(--border);
-    padding: 10px 16px;
-    font-size: 0.7rem;
-    letter-spacing: 0.18em;
-    color: var(--accent);
-    text-transform: uppercase;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .card-title::before {
-    content: '';
-    display: inline-block;
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 6px var(--accent);
-  }
-
-  .config-row {
-    display: flex;
-    gap: 10px;
-    padding: 14px 16px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-
-  .config-row label {
-    font-size: 0.72rem;
-    color: var(--dim);
-    white-space: nowrap;
-    letter-spacing: 0.08em;
-  }
-
-  .config-row input {
-    flex: 1;
-    min-width: 200px;
-    background: #080b0e;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 7px 12px;
-    color: var(--text);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.78rem;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-
-  .config-row input:focus {
-    border-color: var(--accent);
-  }
-
-  .config-row select {
-    background: #080b0e;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 7px 10px;
-    color: var(--text);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.78rem;
-    outline: none;
-    cursor: pointer;
-  }
-
-  .inline-domains {
-    padding: 0 16px 14px;
-  }
-
-  .inline-domains textarea {
-    width: 100%;
-    background: #080b0e;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 10px 12px;
-    color: var(--text);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.78rem;
-    resize: vertical;
-    outline: none;
-    min-height: 100px;
-    line-height: 1.6;
-    transition: border-color 0.2s;
-  }
-
-  .inline-domains textarea:focus { border-color: var(--accent); }
-
-  .inline-domains label {
-    font-size: 0.68rem;
-    color: var(--dim);
-    display: block;
-    margin-bottom: 6px;
-    letter-spacing: 0.08em;
-  }
-
-  .btn-row {
-    padding: 0 16px 16px;
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  button {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.78rem;
-    letter-spacing: 0.1em;
-    border: none;
-    border-radius: 4px;
-    padding: 8px 20px;
-    cursor: pointer;
-    transition: all 0.15s;
-    text-transform: uppercase;
-  }
-
-  #btnStart {
-    background: var(--accent);
-    color: #000;
-    font-weight: bold;
-  }
-
-  #btnStart:hover { box-shadow: 0 0 12px rgba(0,229,255,0.5); transform: translateY(-1px); }
-  #btnStart:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
-
-  #btnStop {
-    background: transparent;
-    border: 1px solid var(--fail);
-    color: var(--fail);
-  }
-
-  #btnStop:hover { background: rgba(255,59,59,0.1); }
-  #btnStop:disabled { opacity: 0.3; cursor: not-allowed; }
-
-  #btnReset {
-    background: transparent;
-    border: 1px solid var(--dim);
-    color: var(--dim);
-  }
-
-  #btnReset:hover { border-color: var(--text); color: var(--text); }
-
-  /* Progress */
-  .phase-bar {
-    padding: 14px 16px 0;
-  }
-
-  .phases {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-
-  .phase-pill {
-    flex: 1;
-    text-align: center;
-    padding: 5px 8px;
-    border-radius: 3px;
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
-    border: 1px solid var(--border);
-    color: var(--dim);
-    transition: all 0.3s;
-  }
-
-  .phase-pill.active {
-    border-color: var(--warn);
-    color: var(--warn);
-    background: rgba(255,204,0,0.06);
-    box-shadow: 0 0 8px rgba(255,204,0,0.2);
-  }
-
-  .phase-pill.done {
-    border-color: var(--ok);
-    color: var(--ok);
-    background: rgba(57,255,20,0.05);
-  }
-
-  .progress-bar-wrap {
-    height: 3px;
-    background: var(--border);
-    border-radius: 2px;
-    margin: 0 16px 14px;
-    overflow: hidden;
-  }
-
-  .progress-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--ok));
-    border-radius: 2px;
-    width: 0%;
-    transition: width 0.3s ease;
-  }
-
-  /* Log */
-  .log-wrap {
-    padding: 0 16px 16px;
-    max-height: 280px;
-    overflow-y: auto;
-  }
-
-  .log-wrap::-webkit-scrollbar { width: 4px; }
-  .log-wrap::-webkit-scrollbar-track { background: transparent; }
-  .log-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  .log-entry {
-    font-size: 0.72rem;
-    line-height: 1.7;
-    display: flex;
-    gap: 10px;
-    align-items: baseline;
-    animation: fadeIn 0.2s ease;
-  }
-
-  @keyframes fadeIn { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: translateX(0); } }
-
-  .log-entry .ts { color: var(--dim); flex-shrink: 0; font-size: 0.65rem; }
-  .log-entry .ok   { color: var(--ok); }
-  .log-entry .fail { color: var(--fail); }
-  .log-entry .warn { color: var(--accent2); }
-  .log-entry .info { color: var(--warn); }
-  .log-entry .dim  { color: var(--dim); }
-
-  /* Result */
-  #resultBox {
-    display: none;
-    padding: 18px 16px;
-    text-align: center;
-  }
-
-  #resultBox .res-label {
-    font-size: 0.68rem;
-    letter-spacing: 0.18em;
-    color: var(--dim);
-    text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-
-  #resultBox .res-url {
-    font-size: 0.9rem;
-    color: var(--ok);
-    text-shadow: 0 0 8px rgba(57,255,20,0.4);
-    word-break: break-all;
-    margin-bottom: 14px;
-  }
-
-  #resultBox .res-go {
-    display: inline-block;
-    padding: 9px 28px;
-    background: var(--ok);
-    color: #000;
-    font-family: 'Share Tech Mono', monospace;
-    font-weight: bold;
-    font-size: 0.8rem;
-    text-decoration: none;
-    border-radius: 4px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    transition: all 0.15s;
-    animation: pulse 1.5s infinite;
-  }
-
-  #resultBox .res-go:hover { box-shadow: 0 0 16px rgba(57,255,20,0.5); transform: translateY(-1px); }
-
-  @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 6px rgba(57,255,20,0.3); }
-    50% { box-shadow: 0 0 16px rgba(57,255,20,0.7); }
-  }
-
-  #noResult {
-    display: none;
-    padding: 16px;
-    text-align: center;
-    color: var(--fail);
-    font-size: 0.78rem;
-    letter-spacing: 0.08em;
-  }
-
-  .toggle-link {
-    font-size: 0.68rem;
-    color: var(--accent);
-    cursor: pointer;
-    text-decoration: underline;
-    letter-spacing: 0.06em;
-  }
-
-  .source-toggle {
-    padding: 8px 16px 2px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .source-toggle label { font-size: 0.68rem; color: var(--dim); letter-spacing: 0.08em; }
-
-  .tab-btn {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--dim);
-    padding: 4px 12px;
-    font-size: 0.66rem;
-    border-radius: 3px;
-  }
-  .tab-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.05); }
-  .tab-btn:hover:not(.active) { border-color: var(--text); color: var(--text); }
-
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
-
-  .countdown {
-    font-size: 0.68rem;
-    color: var(--warn);
-    text-align: center;
-    padding: 4px 16px 12px;
-    letter-spacing: 0.08em;
-  }
+  /* URL list */
+  .url-list{padding:0 14px 14px;display:flex;flex-direction:column;gap:6px}
+  .url-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:4px;border:1px solid var(--border);background:#080b0e;transition:all .2s;cursor:pointer;animation:fadeIn .2s ease}
+  .url-row:hover{border-color:var(--accent);background:rgba(0,229,255,.03)}
+  .url-row.current{border-color:var(--warn);background:rgba(255,204,0,.05);box-shadow:0 0 8px rgba(255,204,0,.15)}
+  .url-row.opened{border-color:var(--dim)}
+  .url-num{font-size:.66rem;color:var(--dim);width:20px;flex-shrink:0;text-align:right}
+  .url-text{flex:1;font-size:.76rem;color:var(--text);word-break:break-all}
+  .url-row.current .url-text{color:var(--warn)}
+  .url-badge{font-size:.6rem;padding:2px 7px;border-radius:2px;border:1px solid;flex-shrink:0}
+  .badge-curr{border-color:var(--warn);color:var(--warn)}
+  .badge-open{border-color:var(--dim);color:var(--dim)}
+  .badge-new{border-color:var(--ok);color:var(--ok)}
+  .open-btn{background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:.66rem;padding:3px 10px;border-radius:3px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+  .open-btn:hover{background:rgba(0,229,255,.1)}
+  .next-btn-wrap{padding:0 14px 14px;display:flex;gap:10px;align-items:center}
+  .next-big{background:var(--ok);color:#000;font-family:'Share Tech Mono',monospace;font-weight:bold;font-size:.82rem;letter-spacing:.1em;border:none;border-radius:4px;padding:10px 28px;cursor:pointer;text-transform:uppercase;transition:all .15s;animation:pulse 1.5s infinite}
+  .next-big:hover{box-shadow:0 0 16px rgba(57,255,20,.5);transform:translateY(-1px)}
+  @keyframes pulse{0%,100%{box-shadow:0 0 6px rgba(57,255,20,.3)}50%{box-shadow:0 0 16px rgba(57,255,20,.7)}}
+  @keyframes fadeIn{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:translateX(0)}}
+  .status-bar{font-size:.7rem;color:var(--dim);padding:8px 14px;border-top:1px solid var(--border)}
+  .exhausted{padding:14px;text-align:center;color:var(--fail);font-size:.78rem}
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>⚡ DSJ Exchange Redirector</h1>
-  <p>Auto-scans mirrors &amp; redirects to first live site</p>
-</div>
+<h1>⚡ DSJ Exchange Redirector</h1>
+<p class="sub">Finds a working mirror & opens it for you</p>
 
-<div class="card">
-  <div class="card-title">Source Configuration</div>
-
-  <div class="source-toggle">
-    <label>Domain list from:</label>
+<!-- Config -->
+<div class="card" id="configCard">
+  <div class="card-title">Source</div>
+  <div class="row">
+    <label>List from:</label>
     <button class="tab-btn active" id="tabUrl" onclick="switchTab('url')">Remote URL</button>
     <button class="tab-btn" id="tabInline" onclick="switchTab('inline')">Inline</button>
   </div>
-
   <div class="tab-panel active" id="panelUrl">
-    <div class="config-row">
-      <label>List URL:</label>
+    <div class="row">
+      <label>URL:</label>
       <input type="text" id="listUrl"
         placeholder="https://chaudohoang.github.io/site-finder/domains.txt"
-        value="https://chaudohoang.github.io/site-finder/domains.txt" />
+        value="https://chaudohoang.github.io/site-finder/domains.txt"/>
     </div>
-    <div style="padding: 0 16px 8px; font-size: 0.67rem; color: var(--dim);">
-      Plain text file, one domain per line (e.g. <code style="color:var(--accent)">dsj256.com</code>). No https:// needed.
-    </div>
+    <div class="hint">Plain text, one domain per line. No https:// needed.</div>
   </div>
-
   <div class="tab-panel" id="panelInline">
-    <div class="inline-domains">
-      <label>One domain per line:</label>
-      <textarea id="inlineDomains" placeholder="dsj255.com&#10;dsj256.com&#10;dsj257.com&#10;dsj259.com&#10;dsj260.com&#10;dsj261.com">dsj255.com
+    <div class="pad">
+      <textarea id="inlineDomains" placeholder="dsj255.com&#10;dsj256.com&#10;dsj257.com">dsj255.com
 dsj256.com
 dsj257.com
 dsj259.com
@@ -422,63 +91,29 @@ dsj260.com
 dsj261.com</textarea>
     </div>
   </div>
-
-  <div class="config-row">
-    <label>Timeout (ms):</label>
-    <input type="number" id="timeout" value="5000" style="width:100px;flex:none;" min="1000" max="30000" step="500"/>
-    <label style="margin-left:16px;">Protocol:</label>
-    <select id="protocol">
-      <option value="https">HTTPS</option>
-      <option value="http">HTTP</option>
-      <option value="both">Try HTTPS → HTTP</option>
-    </select>
-    <label style="margin-left:16px;">Auto-redirect:</label>
-    <select id="autoRedirect">
-      <option value="3">After 3s</option>
-      <option value="1">After 1s</option>
-      <option value="0" selected>Immediately</option>
-      <option value="-1">Manual only</option>
-    </select>
-  </div>
-
-  <div class="btn-row">
-    <button id="btnStart" onclick="startScan()">▶ Start Scan</button>
-    <button id="btnStop" onclick="stopScan()" disabled>■ Stop</button>
-    <button id="btnReset" onclick="resetAll()">↺ Reset</button>
+  <div class="row">
+    <button class="primary" id="btnLoad" onclick="loadAndShow()">▶ Load Sites</button>
+    <button class="sec" onclick="resetAll()">↺ Reset</button>
   </div>
 </div>
 
-<!-- Progress -->
-<div class="card" id="progressCard" style="display:none">
-  <div class="card-title">Scan Progress</div>
-  <div class="phase-bar">
-    <div class="phases">
-      <div class="phase-pill" id="phase0">Phase 1: bare domain</div>
-      <div class="phase-pill" id="phase1">Phase 2: /h5</div>
-      <div class="phase-pill" id="phase2">Phase 3: /h5/ios</div>
-    </div>
+<!-- Site list -->
+<div class="card" id="listCard" style="display:none">
+  <div class="card-title">Candidates — try in order</div>
+  <div class="url-list" id="urlList"></div>
+  <div class="next-btn-wrap" id="nextWrap" style="display:none">
+    <button class="next-big" id="btnNext" onclick="openNext()">→ Blocked? Try Next</button>
+    <span style="font-size:.68rem;color:var(--dim)" id="nextLabel"></span>
   </div>
-  <div class="progress-bar-wrap">
-    <div class="progress-bar-fill" id="progressFill"></div>
-  </div>
-  <div class="log-wrap" id="logWrap"></div>
-
-  <!-- Result -->
-  <div id="resultBox">
-    <div class="res-label">✓ Live site found</div>
-    <div class="res-url" id="resUrl"></div>
-    <div class="countdown" id="countdown"></div>
-    <a href="#" id="resLink" class="res-go" target="_blank">Open Site →</a>
-  </div>
-
-  <div id="noResult">
-    ✗ All paths exhausted — no reachable site found.
+  <div class="status-bar" id="statusBar"></div>
+  <div class="exhausted" id="exhausted" style="display:none">
+    ✗ All candidates tried. Update the domain list and reload.
   </div>
 </div>
 
 <script>
-let aborted = false;
-const suffixes = ['', '/h5', '/h5/ios'];
+let candidates = [];   // {url, el}
+let currentIdx = -1;
 
 function switchTab(tab) {
   document.getElementById('panelUrl').classList.toggle('active', tab === 'url');
@@ -487,241 +122,138 @@ function switchTab(tab) {
   document.getElementById('tabInline').classList.toggle('active', tab === 'inline');
 }
 
-function ts() {
-  return new Date().toLocaleTimeString('en-GB', { hour12: false });
-}
-
-function log(msg, cls = 'dim') {
-  const wrap = document.getElementById('logWrap');
-  const el = document.createElement('div');
-  el.className = 'log-entry';
-  el.innerHTML = `<span class="ts">[${ts()}]</span><span class="${cls}">${msg}</span>`;
-  wrap.appendChild(el);
-  wrap.scrollTop = wrap.scrollHeight;
-}
-
-function setPhase(idx, state) {
-  document.getElementById('phase' + idx).className = 'phase-pill ' + state;
-}
-
-// ── Core check: load URL in hidden iframe, detect real SPA vs CF page ──────
-// Strategy: A real SPA triggers hash navigation (#/home etc) OR loads many
-// same-domain sub-resources. A CF warning page does neither.
-// We use two signals:
-//   1. iframe 'load' fires AND PerformanceObserver sees ≥1 request to the target domain
-//   2. fallback: just count if load fired within timeout (imperfect but works as last resort)
-
-function checkUrlViaIframe(url, timeoutMs) {
-  return new Promise(resolve => {
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-9999px;top:-9999px;';
-    iframe.sandbox = 'allow-scripts allow-same-origin';
-
-    let resolved = false;
-    let subResourceCount = 0;
-    let observer;
-
-    const domain = new URL(url).hostname;
-
-    // Watch for sub-resource loads from the target domain
-    // CF warning pages ONLY load resources from cloudflare.com / challenges.cloudflare.com
-    // Real SPAs load JS/CSS from the target domain itself
-    try {
-      observer = new PerformanceObserver(list => {
-        for (const entry of list.getEntries()) {
-          if (entry.name && entry.name.includes(domain) && !entry.name.includes('favicon')) {
-            subResourceCount++;
-          }
-        }
-      });
-      observer.observe({ type: 'resource', buffered: false });
-    } catch(e) { /* PerformanceObserver not available */ }
-
-    const cleanup = () => {
-      try { observer && observer.disconnect(); } catch(e) {}
-      try { document.body.removeChild(iframe); } catch(e) {}
-    };
-
-    const done = (result) => {
-      if (resolved) return;
-      resolved = true;
-      clearTimeout(timer);
-      cleanup();
-      resolve(result);
-    };
-
-    iframe.onload = () => {
-      // Give SPA 800ms to load sub-resources and do hash navigation
-      setTimeout(() => {
-        // ≥2 sub-resources from target domain = real site
-        // 0 sub-resources = CF page (all its resources come from cloudflare.com)
-        done(subResourceCount >= 1 ? 'live' : 'cf-block');
-      }, 800);
-    };
-
-    iframe.onerror = () => done('dead');
-
-    const timer = setTimeout(() => done('timeout'), timeoutMs);
-
-    document.body.appendChild(iframe);
-    iframe.src = url;
-  });
-}
-
-async function tryUrl(domain, suffix, protocol, timeoutMs) {
-  if (aborted) return null;
-  const url = `${protocol}://${domain}${suffix}`;
-  log(`checking ${url} …`, 'dim');
-
-  const result = await checkUrlViaIframe(url, timeoutMs);
-  
-  if (result === 'live') {
-    log(`✓ LIVE: ${url} (real site resources detected)`, 'ok');
-    return url;
-  } else if (result === 'cf-block') {
-    log(`⚠ CF block: ${url} (no site resources, CF warning page)`, 'warn');
-  } else if (result === 'timeout') {
-    log(`✗ timeout: ${url}`, 'fail');
-  } else {
-    log(`✗ dead: ${url}`, 'fail');
-  }
-  return null;
-}
-
-function showResult(url, autoDelay) {
-  const box = document.getElementById('resultBox');
-  document.getElementById('resUrl').textContent = url;
-  document.getElementById('resLink').href = url;
-  box.style.display = 'block';
-
-  if (autoDelay < 0) {
-    document.getElementById('countdown').textContent = 'Click button to open';
-    return;
-  }
-  if (autoDelay === 0) {
-    document.getElementById('countdown').textContent = 'Redirecting now…';
-    window.location.href = url;
-    return;
-  }
-  let left = autoDelay;
-  document.getElementById('countdown').textContent = `Auto-opening in ${left}s…`;
-  const iv = setInterval(() => {
-    left--;
-    if (left <= 0) {
-      clearInterval(iv);
-      document.getElementById('countdown').textContent = 'Redirecting…';
-      window.location.href = url;
-    } else {
-      document.getElementById('countdown').textContent = `Auto-opening in ${left}s…`;
-    }
-  }, 1000);
-}
-
 async function loadDomains() {
   const tab = document.querySelector('.tab-btn.active').id;
   if (tab === 'tabInline') {
-    const raw = document.getElementById('inlineDomains').value;
-    return raw.split('\n').map(d => d.trim()).filter(d => d && !d.startsWith('#'));
-  } else {
-    const url = document.getElementById('listUrl').value.trim();
-    if (!url) throw new Error('Please enter a remote URL or switch to Inline mode.');
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Failed to load domain list: ${res.status} ${res.statusText}`);
-    const text = await res.text();
-    return text.split('\n').map(d => d.trim()).filter(d => d && !d.startsWith('#'));
+    return document.getElementById('inlineDomains').value
+      .split('\n').map(d=>d.trim()).filter(d=>d&&!d.startsWith('#'));
   }
+  const url = document.getElementById('listUrl').value.trim();
+  if (!url) throw new Error('Enter a URL or switch to Inline');
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return (await res.text()).split('\n').map(d=>d.trim()).filter(d=>d&&!d.startsWith('#'));
 }
 
-async function startScan() {
-  aborted = false;
-
-  document.getElementById('btnStart').disabled = true;
-  document.getElementById('btnStop').disabled = false;
-  document.getElementById('progressCard').style.display = 'block';
-  document.getElementById('logWrap').innerHTML = '';
-  document.getElementById('resultBox').style.display = 'none';
-  document.getElementById('noResult').style.display = 'none';
-  document.getElementById('progressFill').style.width = '0%';
-  setPhase(0, ''); setPhase(1, ''); setPhase(2, '');
-
-  const timeoutMs = parseInt(document.getElementById('timeout').value) || 6000;
-  const protocol = document.getElementById('protocol').value === 'http' ? 'http' : 'https';
-  const autoDelay = parseInt(document.getElementById('autoRedirect').value);
+async function loadAndShow() {
+  const btn = document.getElementById('btnLoad');
+  btn.disabled = true; btn.textContent = 'Loading…';
 
   let domains;
-  try {
-    domains = await loadDomains();
-  } catch (e) {
-    log('Error: ' + e.message, 'info');
-    document.getElementById('btnStart').disabled = false;
-    document.getElementById('btnStop').disabled = true;
-    return;
-  }
+  try { domains = await loadDomains(); }
+  catch(e) { alert('Could not load domain list: ' + e.message); btn.disabled=false; btn.textContent='▶ Load Sites'; return; }
 
-  if (domains.length === 0) {
-    log('No domains found.', 'info');
-    document.getElementById('btnStart').disabled = false;
-    document.getElementById('btnStop').disabled = true;
-    return;
-  }
+  // Build candidate list: bare → /h5 → /h5/ios for each domain
+  const suffixes = ['', '/h5', '/h5/ios'];
+  candidates = [];
+  const listEl = document.getElementById('urlList');
+  listEl.innerHTML = '';
 
-  const total = domains.length * suffixes.length;
-  let done = 0;
-
-  log(`Loaded ${domains.length} domain(s). Checking via iframe resource detection…`, 'info');
-  log(`Timeout per URL: ${timeoutMs}ms`, 'dim');
-
-  for (let si = 0; si < suffixes.length; si++) {
-    if (aborted) break;
-    const suffix = suffixes[si];
-    setPhase(si, 'active');
-    log(`── Phase ${si + 1}: ${suffix || 'bare domain'} ──`, 'info');
-
+  let n = 1;
+  for (const suffix of suffixes) {
     for (const domain of domains) {
-      if (aborted) break;
-      const found = await tryUrl(domain, suffix, protocol, timeoutMs);
-      done++;
-      document.getElementById('progressFill').style.width = (done / total * 100) + '%';
-
-      if (found) {
-        for (let j = 0; j <= si; j++) setPhase(j, 'done');
-        log(`\n✓ Found working site: ${found}`, 'ok');
-        document.getElementById('btnStop').disabled = true;
-        document.getElementById('btnStart').disabled = false;
-        showResult(found, autoDelay);
-        return;
-      }
+      const url = `https://${domain}${suffix}`;
+      const row = document.createElement('div');
+      row.className = 'url-row';
+      row.innerHTML = `
+        <span class="url-num">${n}</span>
+        <span class="url-text">${url}</span>
+        <button class="open-btn" onclick="openUrl(${candidates.length})">Open</button>`;
+      listEl.appendChild(row);
+      candidates.push({ url, el: row, opened: false });
+      n++;
     }
-    setPhase(si, 'done');
   }
 
-  if (!aborted) {
-    log('All phases complete. No live site found.', 'fail');
-    document.getElementById('noResult').style.display = 'block';
-  } else {
-    log('Scan stopped.', 'info');
-  }
+  document.getElementById('listCard').style.display = 'block';
+  document.getElementById('configCard').style.display = 'none';
 
-  document.getElementById('btnStart').disabled = false;
-  document.getElementById('btnStop').disabled = true;
+  // Auto-open the first one
+  openNext();
 }
 
-function stopScan() {
-  aborted = true;
-  document.getElementById('btnStop').disabled = true;
-  document.getElementById('btnStart').disabled = false;
+function openUrl(idx) {
+  const c = candidates[idx];
+  if (!c) return;
+
+  // Deactivate previous current
+  if (currentIdx >= 0 && candidates[currentIdx]) {
+    const prev = candidates[currentIdx];
+    prev.el.className = 'url-row opened';
+    prev.el.querySelector('.url-text').style.color = '';
+    const oldBadge = prev.el.querySelector('.url-badge');
+    if (oldBadge) oldBadge.remove();
+    addBadge(prev.el, 'OPENED', 'badge-open');
+  }
+
+  currentIdx = idx;
+  c.opened = true;
+
+  // Highlight current
+  c.el.className = 'url-row current';
+  const oldBadge = c.el.querySelector('.url-badge');
+  if (oldBadge) oldBadge.remove();
+  addBadge(c.el, '← NOW', 'badge-curr');
+
+  // Open in new tab
+  window.open(c.url, '_blank');
+
+  updateStatus();
+}
+
+function openNext() {
+  const next = candidates.findIndex((c, i) => i > currentIdx);
+  if (next === -1) {
+    // Try from beginning if all opened, or show exhausted
+    const notOpened = candidates.findIndex(c => !c.opened);
+    if (notOpened === -1) {
+      document.getElementById('exhausted').style.display = 'block';
+      document.getElementById('nextWrap').style.display = 'none';
+      return;
+    }
+    openUrl(notOpened);
+  } else {
+    openUrl(next);
+  }
+}
+
+function addBadge(row, text, cls) {
+  const b = document.createElement('span');
+  b.className = 'url-badge ' + cls;
+  b.textContent = text;
+  row.insertBefore(b, row.querySelector('.open-btn'));
+}
+
+function updateStatus() {
+  const opened = candidates.filter(c => c.opened).length;
+  const total = candidates.length;
+  const remaining = total - currentIdx - 1;
+  document.getElementById('statusBar').textContent =
+    `Opened ${opened} of ${total} candidates  •  ${remaining} remaining`;
+
+  const nextWrap = document.getElementById('nextWrap');
+  const nextLabel = document.getElementById('nextLabel');
+
+  if (currentIdx < total - 1) {
+    nextWrap.style.display = 'flex';
+    const next = candidates[currentIdx + 1];
+    nextLabel.textContent = `next: ${next ? next.url : ''}`;
+  } else {
+    nextWrap.style.display = 'none';
+    document.getElementById('exhausted').style.display = 'block';
+  }
 }
 
 function resetAll() {
-  aborted = true;
-  document.getElementById('progressCard').style.display = 'none';
-  document.getElementById('logWrap').innerHTML = '';
-  document.getElementById('progressFill').style.width = '0%';
-  document.getElementById('btnStart').disabled = false;
-  document.getElementById('btnStop').disabled = true;
-  setPhase(0, ''); setPhase(1, ''); setPhase(2, '');
+  candidates = [];
+  currentIdx = -1;
+  document.getElementById('listCard').style.display = 'none';
+  document.getElementById('configCard').style.display = 'block';
+  document.getElementById('urlList').innerHTML = '';
+  document.getElementById('exhausted').style.display = 'none';
+  document.getElementById('btnLoad').disabled = false;
+  document.getElementById('btnLoad').textContent = '▶ Load Sites';
 }
 </script>
-
 </body>
 </html>

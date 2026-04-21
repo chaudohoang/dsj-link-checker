@@ -37,14 +37,19 @@
   .log-wrap{padding:0 14px 14px;max-height:260px;overflow-y:auto}
   .log-wrap::-webkit-scrollbar{width:4px}
   .log-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-  .log-entry{font-size:.7rem;line-height:1.7;display:flex;gap:8px;align-items:center;animation:fadeIn .2s ease}
+  .log-entry{font-size:.74rem;line-height:1.5;display:flex;gap:8px;align-items:center;animation:fadeIn .2s ease;padding:8px 0;border-bottom:1px solid var(--border)}
+  .log-entry:last-child{border-bottom:none}
   .log-entry .log-text{flex:1}
-  .log-open{background:transparent;border:1px solid var(--dim);color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:.6rem;padding:1px 8px;border-radius:3px;cursor:pointer;white-space:nowrap;flex-shrink:0;letter-spacing:.06em;text-decoration:none;transition:all .15s}
-  .log-open:hover{border-color:var(--accent);color:var(--accent)}
+  .log-open,.log-copy{background:transparent;font-family:'Share Tech Mono',monospace;font-size:.62rem;padding:3px 10px;border-radius:3px;cursor:pointer;white-space:nowrap;flex-shrink:0;letter-spacing:.06em;text-decoration:none;transition:all .15s;border:1px solid}
   .log-open.live{border-color:var(--ok);color:var(--ok)}
   .log-open.live:hover{background:rgba(57,255,20,.1)}
-  .log-open.blocked{border-color:var(--fail);color:var(--fail)}
-  .log-open.blocked:hover{background:rgba(255,59,59,.1)}
+  .log-copy{border-color:var(--dim);color:var(--dim)}
+  .log-copy:hover{border-color:var(--accent);color:var(--accent)}
+  .log-copy.copied{border-color:var(--ok);color:var(--ok)}
+  .copy-all-wrap{padding:10px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end}
+  .copy-all-btn{background:transparent;border:1px solid var(--dim);color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:.68rem;padding:5px 16px;border-radius:3px;cursor:pointer;letter-spacing:.08em;transition:all .15s}
+  .copy-all-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .live-label{font-size:.68rem;color:var(--ok);letter-spacing:.12em;text-transform:uppercase;padding:10px 14px 4px;display:none}
   .ts{color:var(--dim);flex-shrink:0;font-size:.63rem}
   .ok{color:var(--ok)}.fail{color:var(--fail)}.warn{color:var(--accent2)}.info{color:var(--warn)}.dim{color:var(--dim)}
   @keyframes fadeIn{from{opacity:0;transform:translateX(-3px)}to{opacity:1;transform:translateX(0)}}
@@ -57,49 +62,26 @@
 <h1>⚡ DSJ Exchange Link Checker</h1>
 <p class="sub">Checks all mirrors &amp; shows which ones are live</p>
 
-<div class="card">
-  <div class="card-title">Source Configuration</div>
-  <div class="row">
-    <label>List from:</label>
-    <button class="tab-btn active" id="tabUrl" onclick="switchTab('url')">Remote URL</button>
-    <button class="tab-btn" id="tabInline" onclick="switchTab('inline')">Inline</button>
-  </div>
-  <div class="tab-panel active" id="panelUrl">
-    <div class="row">
-      <label>URL:</label>
-      <input type="text" id="listUrl"
-        placeholder="https://chaudohoang.github.io/dsj-link-checker/domains.txt"
-        value="https://chaudohoang.github.io/dsj-link-checker/domains.txt"/>
-    </div>
-    <div class="hint">Plain text, one domain per line. No https:// needed.</div>
-  </div>
-  <div class="tab-panel" id="panelInline">
-    <div class="pad">
-      <textarea id="inlineDomains" placeholder="dsj255.com&#10;dsj256.com">dsj255.com
-dsj256.com
-dsj257.com
-dsj259.com
-dsj260.com
-dsj261.com</textarea>
-    </div>
-  </div>
-  <div class="row">
-    <button class="primary" id="btnStart" onclick="startScan()">▶ Start Scan</button>
-    <button class="sec" id="btnStop" onclick="stopScan()" disabled>■ Stop</button>
-    <button class="sec" onclick="resetAll()">↺ Reset</button>
-  </div>
+<div style="display:flex;gap:10px;justify-content:center;margin-bottom:18px">
+  <button class="primary" id="btnStart" onclick="startScan()">▶ CHECK URL</button>
+  <button class="sec" id="btnStop" onclick="stopScan()" disabled>■ Stop</button>
 </div>
 
 <div class="card" id="progressCard" style="display:none">
-  <div class="card-title">Scan Progress</div>
+  <div class="card-title">Check Progress</div>
 
   <div style="display:flex;align-items:center;gap:8px;padding:0 14px;margin-bottom:4px"><div class="prog-wrap" style="flex:1;margin:0"><div class="prog-fill" id="progFill"></div></div><span id="progPct" style="font-size:.68rem;color:var(--dim);white-space:nowrap;min-width:36px;text-align:right">0%</span></div>
+  <div class="live-label" id="liveLabel">Latest live url :</div>
   <div class="log-wrap" id="logWrap"></div>
+  <div class="copy-all-wrap" id="copyAllWrap" style="display:none">
+    <button class="copy-all-btn" onclick="copyAll()">Copy all live URLs</button>
+  </div>
   <div id="noResult" style="display:none;padding:10px 14px 14px;font-size:.72rem"></div>
 </div>
 
 <script>
 let aborted = false;
+let liveUrls = [];
 const suffixes = ['/h5/ios', '/h5', ''];
 
 const LIVE_PATTERNS  = ['static/h5/second/', 'chart-loading-animation'];
@@ -117,22 +99,32 @@ const BLOCK_PATTERNS = [
   'performance & security by cloudflare',
 ];
 
-function switchTab(t) {
-  ['url','inline'].forEach(x => {
-    document.getElementById('panel'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active', x===t);
-    document.getElementById('tab'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active', x===t);
-  });
-}
 function ts() { return new Date().toLocaleTimeString('en-GB',{hour12:false}); }
 let _deferredLogs = [];
 
-function makeEntry(msg, cls, url) {
+function makeEntry(msg, cls, url, showCopy) {
   const el = document.createElement('div');
   el.className = 'log-entry';
-  const btn = url ? '<a class="log-open live" href="' + url + '" target="_blank">open</a>' : '';
+  const openBtn = url ? '<a class="log-open live" href="' + url + '" target="_blank">open</a>' : '';
+  const copyBtn = (url && showCopy)
+    ? '<button class="log-copy" onclick="copyOne(this,\''+url+'\')">copy</button>' : '';
   el.innerHTML = '<span class="ts">[' + ts() + ']</span>'
-    + '<span class="log-text ' + (cls||'dim') + '">' + msg + '</span>' + btn;
+    + '<span class="log-text ' + (cls||'dim') + '">' + msg + '</span>'
+    + copyBtn + openBtn;
   return el;
+}
+function copyOne(btn, url) {
+  navigator.clipboard.writeText(url.replace(/^https?:\/\//, '')).then(() => {
+    btn.textContent = 'copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+function copyAll() {
+  navigator.clipboard.writeText(liveUrls.map(u=>u.replace(/^https?:\/\//, '')).join('\n')).then(() => {
+    const btn = document.querySelector('.copy-all-btn');
+    btn.textContent = 'copied!';
+    setTimeout(() => { btn.textContent = 'Copy all live URLs'; }, 1500);
+  });
 }
 function log(msg, cls) {
   const w = document.getElementById('logWrap');
@@ -140,26 +132,17 @@ function log(msg, cls) {
   w.scrollTop = w.scrollHeight;
 }
 function logLive(msg, url) {
+  liveUrls.push(url);
+  document.getElementById('liveLabel').style.display = 'block';
+  document.getElementById('copyAllWrap').style.display = 'flex';
   const w = document.getElementById('logWrap');
-  const el = makeEntry(msg, 'ok', url);
+  const el = makeEntry(msg, 'ok', url, true);
   const first = w.querySelector('.deferred');
   if (first) w.insertBefore(el, first); else w.appendChild(el);
   w.scrollTop = 0;
 }
 function logDeferred(msg, cls, url) { _deferredLogs.push({msg, cls: cls||'dim', url: url||null}); }
-function flushDeferred() {
-  const w = document.getElementById('logWrap');
-  if (!_deferredLogs.length) return;
-  w.appendChild(makeEntry('── other results ───────────────────────', 'dim', null));
-  _deferredLogs.forEach(d => {
-    const el = makeEntry(d.msg, d.cls, d.url || null);
-    if (d.url) el.querySelector('.log-open').classList.add('blocked');
-    el.classList.add('deferred');
-    w.appendChild(el);
-  });
-  _deferredLogs = [];
-  w.scrollTop = 0;
-}
+function flushDeferred() { _deferredLogs = []; }
 function setProgress(n, t) {
   const pct = t > 0 ? Math.round(n/t*100) : 0;
   document.getElementById('progFill').style.width = pct + '%';
@@ -284,23 +267,20 @@ async function checkUrl(url, timeoutMs) {
 }
 
 async function loadDomains() {
-  const tab = document.querySelector('.tab-btn.active').id;
-  if (tab === 'tabInline')
-    return document.getElementById('inlineDomains').value
-      .split('\n').map(d=>d.trim()).filter(d=>d&&!d.startsWith('#'));
-  const url = document.getElementById('listUrl').value.trim();
-  if (!url) throw new Error('Enter a URL or switch to Inline');
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const res = await fetch('https://chaudohoang.github.io/dsj-link-checker/domains.txt?_=' + Date.now());
+  if (!res.ok) throw new Error('HTTP ' + res.status);
   return (await res.text()).split('\n').map(d=>d.trim()).filter(d=>d&&!d.startsWith('#'));
 }
 
 async function startScan() {
   aborted = false;
   document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnStart').innerHTML = '⏳ CHECKING…';
   document.getElementById('btnStop').disabled = false;
   document.getElementById('progressCard').style.display = 'block';
-  document.getElementById('logWrap').innerHTML = ''; _deferredLogs = [];
+  document.getElementById('logWrap').innerHTML = ''; _deferredLogs = []; liveUrls = [];
+  document.getElementById('liveLabel').style.display='none';
+  document.getElementById('copyAllWrap').style.display='none';
   document.getElementById('noResult').style.display = 'none';
   document.getElementById('progFill').style.width = '0%'; document.getElementById('progPct').textContent = '0%';
 
@@ -333,7 +313,7 @@ async function startScan() {
 
       const icon = verdict === 'live' ? '✓' : verdict === 'blocked' ? '⚠' : '✗';
       const cls  = verdict === 'live' ? 'ok'  : verdict === 'blocked' ? 'warn' : 'fail';
-      if (verdict === 'live') logLive('✓ [live] ' + c.url, c.url);
+      if (verdict === 'live') logLive('✓ ' + c.url.replace('https://',''), c.url);
       else logDeferred(icon + ' [' + verdict + '] ' + c.url, cls, c.url);
 
       if (!winner) {
@@ -351,8 +331,6 @@ async function startScan() {
     for (let j = 0; j < total; j++)
       if (results[j] === 'live') { winner = candidates[j].url; break; }
 
-  flushDeferred();
-
   if (aborted) {
     log('Scan stopped.', 'info');
   } else if (winner) {
@@ -367,18 +345,14 @@ async function startScan() {
   }
 
   document.getElementById('btnStart').disabled = false;
+  document.getElementById('btnStart').innerHTML = '▶ CHECK URL';
   document.getElementById('btnStop').disabled = true;
 }
 
-function stopScan() { aborted=true; document.getElementById('btnStop').disabled=true; document.getElementById('btnStart').disabled=false; }
-function resetAll() {
-  aborted=true;
-  document.getElementById('progressCard').style.display='none';
-  document.getElementById('logWrap').innerHTML='';
-  document.getElementById('progFill').style.width='0%';
-  document.getElementById('btnStart').disabled=false;
-  document.getElementById('btnStop').disabled=true;
-}
+window.addEventListener("load", () => startScan());
+
+function stopScan() { aborted=true; document.getElementById('btnStop').disabled=true; document.getElementById('btnStart').disabled=false; document.getElementById('btnStart').innerHTML='▶ CHECK URL'; }
+
 </script>
 </body>
 </html>

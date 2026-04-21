@@ -513,25 +513,39 @@ function updateProgress() {
   document.getElementById('progressFill').style.width = pct + '%';
 }
 
-// CF block indicators found in page body
+// CF / security block indicators — checked against full page HTML (lowercased)
 const CF_BLOCK_PATTERNS = [
+  // Cloudflare interstitials
   'just a moment',
   'enable javascript and cookies',
   'cf-browser-verification',
-  'suspected misleading website',
-  'reported for potentially misrepresenting',
   'cloudflare ray id',
+  'ddos protection by cloudflare',
   'please wait while we verify',
   'checking your browser',
-  'ddos protection by cloudflare',
   'attention required! | cloudflare',
+  // Cloudflare warning pages
+  'suspected misleading website',
+  'suspected phishing',
+  'phishing site',
+  'reported for potentially misrepresenting',
+  'this claim has not been validated by cloudflare',
+  'ignore &amp; proceed',
+  'ignore & proceed',
+  // Generic block / error pages
+  'access denied',
+  'this site is blocked',
+  'your access to this site has been blocked',
+  '403 forbidden',
+  'error 1010',
+  'error 1012',
+  'error 1020',
 ];
 
 async function checkUrl(url, timeoutMs) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    // Use allorigins proxy so we can read the actual response body + status
     const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&timestamp=${Date.now()}`;
     const res = await fetch(proxyUrl, { signal: controller.signal });
     clearTimeout(timer);
@@ -539,11 +553,23 @@ async function checkUrl(url, timeoutMs) {
     const data = await res.json();
 
     const httpCode = data.status?.http_code ?? 0;
-    // Reject non-2xx responses
     if (httpCode < 200 || httpCode >= 300) return false;
 
-    // Scan body for CF block fingerprints
     const body = (data.contents || '').toLowerCase();
+
+    // Also extract <title> for extra signal
+    const titleMatch = body.match(/<title[^>]*>(.*?)<\/title>/);
+    const title = titleMatch ? titleMatch[1] : '';
+
+    // Reject if title contains cloudflare + warning keywords
+    if (title.includes('cloudflare') && (
+      title.includes('phishing') ||
+      title.includes('misleading') ||
+      title.includes('attention') ||
+      title.includes('blocked') ||
+      title.includes('just a moment')
+    )) return false;
+
     for (const pattern of CF_BLOCK_PATTERNS) {
       if (body.includes(pattern)) return false;
     }

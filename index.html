@@ -555,24 +555,27 @@ async function checkUrlViaProxy(url, timeoutMs) {
     const httpCode = data.status?.http_code ?? 0;
     const body = (data.contents || '').toLowerCase();
 
-    // If proxy returned empty body, it couldn't reach the site → unknown
+    // If proxy returned empty body, it couldn't reach the site → unknown, try direct
     if (!body || body.length < 50) return null;
 
-    if (httpCode < 200 || httpCode >= 300) return false;
-
-    // Extract <title> for CF warning detection
+    // Check body for CF block fingerprints regardless of HTTP status
     const titleMatch = body.match(/<title[^>]*>(.*?)<\/title>/);
     const title = titleMatch ? titleMatch[1] : '';
     if (title.includes('cloudflare') && (
       title.includes('phishing') || title.includes('misleading') ||
       title.includes('attention') || title.includes('blocked') ||
       title.includes('just a moment')
-    )) return false;
+    )) return false; // confirmed CF block page
 
     for (const pattern of CF_BLOCK_PATTERNS) {
-      if (body.includes(pattern)) return false;
+      if (body.includes(pattern)) return false; // confirmed CF block page
     }
-    return true; // proxy reached it and no block patterns found
+
+    // If we got a 4xx/5xx but NO CF block content, the proxy may have been
+    // blocked while a real browser would get through → treat as unknown
+    if (httpCode < 200 || httpCode >= 300) return null;
+
+    return true; // proxy reached it, 2xx, no block patterns → live site
   } catch {
     clearTimeout(timer);
     return null; // proxy timed out or errored → unknown

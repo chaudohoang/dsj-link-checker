@@ -55,6 +55,14 @@
   @keyframes fadeIn{from{opacity:0;transform:translateX(-3px)}to{opacity:1;transform:translateX(0)}}
 
   #noResult{display:none;padding:14px;text-align:center;color:var(--fail);font-size:.76rem}
+  #logPanel{display:none;border-top:1px solid var(--border);padding:10px 14px 14px}
+  .log-section-title{font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;padding:8px 0 4px;border-bottom:1px solid var(--border);margin-bottom:6px;margin-top:10px}
+  .log-section-title:first-child{margin-top:0}
+  .log-row{font-size:.72rem;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:center;gap:8px}
+  .log-row:last-child{border-bottom:none}
+  .log-row .lr-url{flex:1;word-break:break-all}
+  .log-row a{font-size:.6rem;padding:2px 8px;border-radius:3px;border:1px solid var(--ok);color:var(--ok);text-decoration:none;white-space:nowrap}
+  .log-row a:hover{background:rgba(57,255,20,.1)}
 </style>
 </head>
 <body>
@@ -63,7 +71,7 @@
 <p class="sub">Checks all mirrors &amp; shows which ones are live</p>
 
 <div style="display:flex;gap:10px;justify-content:center;margin-bottom:18px">
-  <button class="primary" id="btnStart" onclick="startScan()">▶ CHECK URL</button>
+  <button class="primary" id="btnStart" onclick="startScan()">Check Link</button>
   <button class="sec" id="btnStop" onclick="stopScan()" disabled>■ Stop</button>
 </div>
 
@@ -71,17 +79,27 @@
   <div class="card-title">Check Progress</div>
 
   <div style="display:flex;align-items:center;gap:8px;padding:0 14px;margin-bottom:4px"><div class="prog-wrap" style="flex:1;margin:0"><div class="prog-fill" id="progFill"></div></div><span id="progPct" style="font-size:.68rem;color:var(--dim);white-space:nowrap;min-width:36px;text-align:right">0%</span></div>
-  <div class="live-label" id="liveLabel">Latest live url :</div>
+  <div class="live-label" id="liveLabel">Latest live links :</div>
   <div class="log-wrap" id="logWrap"></div>
   <div class="copy-all-wrap" id="copyAllWrap" style="display:none">
-    <button class="copy-all-btn" onclick="copyAll()">Copy all live URLs</button>
+    <button class="copy-all-btn" onclick="copyAll()">Copy all live links</button>
   </div>
   <div id="noResult" style="display:none;padding:10px 14px 14px;font-size:.72rem"></div>
+</div>
+
+<div id="logToggleRow" style="display:none;text-align:center;margin:10px 0">
+  <button class="sec" id="btnViewLog" onclick="toggleLog()">▼ Show Log</button>
+</div>
+
+<div id="logPanel" class="card" style="display:none;width:100%;max-width:700px">
+  <div class="card-title">Scan Log</div>
+  <div style="padding:10px 14px 14px;max-height:320px;overflow-y:auto" id="logModalBody"></div>
 </div>
 
 <script>
 let aborted = false;
 let liveUrls = [];
+let allResults = [];
 const suffixes = ['/h5/ios', '/h5', ''];
 
 const LIVE_PATTERNS  = ['static/h5/second/', 'chart-loading-animation'];
@@ -123,7 +141,7 @@ function copyAll() {
   navigator.clipboard.writeText(liveUrls.map(u=>u.replace(/^https?:\/\//, '')).join('\n')).then(() => {
     const btn = document.querySelector('.copy-all-btn');
     btn.textContent = 'copied!';
-    setTimeout(() => { btn.textContent = 'Copy all live URLs'; }, 1500);
+    setTimeout(() => { btn.textContent = 'Copy all live links'; }, 1500);
   });
 }
 function log(msg, cls) {
@@ -135,6 +153,7 @@ function logLive(msg, url) {
   liveUrls.push(url);
   document.getElementById('liveLabel').style.display = 'block';
   document.getElementById('copyAllWrap').style.display = 'flex';
+  document.getElementById('logToggleRow').style.display = 'block';
   const w = document.getElementById('logWrap');
   const el = makeEntry(msg, 'ok', url, true);
   const first = w.querySelector('.deferred');
@@ -275,12 +294,15 @@ async function loadDomains() {
 async function startScan() {
   aborted = false;
   document.getElementById('btnStart').disabled = true;
-  document.getElementById('btnStart').innerHTML = '⏳ CHECKING…';
+  document.getElementById('btnStart').innerHTML = 'Checking...';
   document.getElementById('btnStop').disabled = false;
   document.getElementById('progressCard').style.display = 'block';
-  document.getElementById('logWrap').innerHTML = ''; _deferredLogs = []; liveUrls = [];
+  document.getElementById('logWrap').innerHTML = ''; _deferredLogs = []; liveUrls = []; allResults = [];  const lb=document.getElementById('btnShowLog'); if(lb) lb.textContent='Show Log';
   document.getElementById('liveLabel').style.display='none';
   document.getElementById('copyAllWrap').style.display='none';
+  document.getElementById('logToggleRow').style.display='none';
+  document.getElementById('logPanel').style.display='none';
+  const vl=document.getElementById('btnViewLog'); if(vl) vl.textContent='▼ Show Log';
   document.getElementById('noResult').style.display = 'none';
   document.getElementById('progFill').style.width = '0%'; document.getElementById('progPct').textContent = '0%';
 
@@ -313,6 +335,7 @@ async function startScan() {
 
       const icon = verdict === 'live' ? '✓' : verdict === 'blocked' ? '⚠' : '✗';
       const cls  = verdict === 'live' ? 'ok'  : verdict === 'blocked' ? 'warn' : 'fail';
+      allResults.push({url: c.url, verdict});
       if (verdict === 'live') logLive('✓ ' + c.url.replace('https://',''), c.url);
       else logDeferred(icon + ' [' + verdict + '] ' + c.url, cls, c.url);
 
@@ -345,14 +368,52 @@ async function startScan() {
   }
 
   document.getElementById('btnStart').disabled = false;
-  document.getElementById('btnStart').innerHTML = '▶ CHECK URL';
+  document.getElementById('btnStart').innerHTML = 'Check Link';
   document.getElementById('btnStop').disabled = true;
 }
 
 window.addEventListener("load", () => startScan());
 
-function stopScan() { aborted=true; document.getElementById('btnStop').disabled=true; document.getElementById('btnStart').disabled=false; document.getElementById('btnStart').innerHTML='▶ CHECK URL'; }
+function stopScan() { aborted=true; document.getElementById('btnStop').disabled=true; document.getElementById('btnStart').disabled=false; document.getElementById('btnStart').innerHTML='Check Link'; }
 
+
+function renderLog() {
+  const body = document.getElementById('logModalBody');
+  const groups = {live: [], blocked: [], dead: []};
+  allResults.forEach(r => { if (groups[r.verdict]) groups[r.verdict].push(r.url); });
+  const labels = {live:{title:'✓ Live',cls:'ok'}, blocked:{title:'⚠ Blocked (CF)',cls:'warn'}, dead:{title:'✗ Dead',cls:'fail'}};
+  body.innerHTML = '';
+  Object.entries(labels).forEach(([key, meta]) => {
+    const urls = groups[key];
+    if (!urls.length) return;
+    const sec = document.createElement('div');
+    { const t=document.createElement('div'); t.style.cssText='font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;padding:10px 0 4px;border-bottom:1px solid var(--border);margin-bottom:4px'; const clrMap={ok:'var(--ok)',warn:'var(--accent2)',fail:'var(--fail)'}; t.style.color=clrMap[meta.cls]||'var(--text)'; t.textContent=meta.title+' ('+urls.length+')'; sec.appendChild(t); }
+    urls.forEach(url => {
+      const row = document.createElement('div');
+      row.style.cssText = 'font-size:.72rem;padding:3px 0;font-family:Share Tech Mono,monospace';
+      const display = url.replace('https://','');
+      const colors = {ok:'var(--ok)', warn:'var(--accent2)', fail:'var(--fail)'};
+      row.style.color = colors[meta.cls] || 'var(--text)';
+      row.textContent = display;
+      sec.appendChild(row);
+    });
+    body.appendChild(sec);
+  });
+  if (!allResults.length) body.innerHTML = '<p style="color:var(--dim);font-size:.72rem;padding:12px 0">No results yet.</p>';
+}
+function toggleLog() {
+  const panel = document.getElementById('logPanel');
+  const btn = document.getElementById('btnViewLog');
+  const isOpen = panel.style.display !== 'none';
+  if (isOpen) {
+    panel.style.display = 'none';
+    btn.textContent = '▼ Show Log';
+  } else {
+    renderLog();
+    panel.style.display = 'block';
+    btn.textContent = '▲ Hide Log';
+  }
+}
 </script>
 </body>
 </html>

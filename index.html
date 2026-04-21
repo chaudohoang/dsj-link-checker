@@ -524,7 +524,7 @@ const CF_BLOCK_PATTERNS = [
   'please wait while we verify',
   'checking your browser',
   'attention required! | cloudflare',
-  // Cloudflare warning pages
+  // Cloudflare warning / phishing pages
   'suspected misleading website',
   'suspected phishing',
   'phishing site',
@@ -532,6 +532,16 @@ const CF_BLOCK_PATTERNS = [
   'this claim has not been validated by cloudflare',
   'ignore &amp; proceed',
   'ignore & proceed',
+  // Cloudflare footer — appears on ALL CF error/challenge/warning pages
+  'performance & security by cloudflare',
+  'performance &amp; security by cloudflare',
+  'security by cloudflare',
+  // CF raw HTML markers
+  'cf-wrapper',
+  'cf-column',
+  'cf-error-details',
+  '__cf$cv$params',
+  'challenges.cloudflare.com',
   // Generic block / error pages
   'access denied',
   'this site is blocked',
@@ -557,6 +567,7 @@ async function checkUrlViaProxy(url, timeoutMs) {
 
     // If proxy returned empty body, it couldn't reach the site → unknown, try direct
     if (!body || body.length < 50) return null;
+    log(`  proxy1 → HTTP ${httpCode}, body[0:120]: ${body.substring(0,120).replace(/\n/g,' ')}`, 'dim');
 
     // Check body for CF block fingerprints regardless of HTTP status
     const titleMatch = body.match(/<title[^>]*>(.*?)<\/title>/);

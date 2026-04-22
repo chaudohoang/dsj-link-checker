@@ -50,6 +50,7 @@
   .copy-all-btn{background:transparent;border:1px solid var(--dim);color:var(--dim);font-family:'Share Tech Mono',monospace;font-size:.68rem;padding:5px 16px;border-radius:3px;cursor:pointer;letter-spacing:.08em;transition:all .15s}
   .copy-all-btn:hover{border-color:var(--accent);color:var(--accent)}
   .live-label{font-size:.68rem;color:var(--ok);letter-spacing:.12em;text-transform:uppercase;padding:10px 14px 4px;display:none}
+  .sister-badge{font-size:.58rem;padding:2px 6px;border-radius:3px;border:1px solid var(--accent2);color:var(--accent2);margin-left:4px;white-space:nowrap;flex-shrink:0}
   .ts{color:var(--dim);flex-shrink:0;font-size:.63rem}
   .ok{color:var(--ok)}.fail{color:var(--fail)}.warn{color:var(--accent2)}.info{color:var(--warn)}.dim{color:var(--dim)}
   @keyframes fadeIn{from{opacity:0;transform:translateX(-3px)}to{opacity:1;transform:translateX(0)}}
@@ -100,7 +101,10 @@
 let aborted = false;
 let liveUrls = [];
 let allResults = [];
-const suffixes = ['/h5/ios', '/h5', ''];
+// ── Domain list loaded from Gist (auto-updated daily by GitHub Actions) ──────
+const DOMAINS_GIST_URL = 'https://gist.githubusercontent.com/chaudohoang/3c7ffcea0fae3f99f7fce1d6adc2032b/raw/domains.txt';
+let sisterDomains = new Set();
+const suffixes = ['/h5/ios', '/h5', '/pc', ''];
 
 const LIVE_PATTERNS  = ['static/h5/second/', 'chart-loading-animation'];
 const BLOCK_PATTERNS = [
@@ -120,15 +124,16 @@ const BLOCK_PATTERNS = [
 function ts() { return new Date().toLocaleTimeString('en-GB',{hour12:false}); }
 let _deferredLogs = [];
 
-function makeEntry(msg, cls, url, showCopy) {
+function makeEntry(msg, cls, url, showCopy, isSister) {
   const el = document.createElement('div');
   el.className = 'log-entry';
   const openBtn = url ? '<a class="log-open live" href="' + url + '" target="_blank">open</a>' : '';
   const copyBtn = (url && showCopy)
     ? '<button class="log-copy" onclick="copyOne(this,\''+url+'\')">copy</button>' : '';
+  const badge = isSister ? '<span class="sister-badge">sister</span>' : '';
   el.innerHTML = '<span class="ts">[' + ts() + ']</span>'
     + '<span class="log-text ' + (cls||'dim') + '">' + msg + '</span>'
-    + copyBtn + openBtn;
+    + badge + copyBtn + openBtn;
   return el;
 }
 function copyOne(btn, url) {
@@ -149,13 +154,13 @@ function log(msg, cls) {
   w.appendChild(makeEntry(msg, cls||'dim', null));
   w.scrollTop = w.scrollHeight;
 }
-function logLive(msg, url) {
+function logLive(msg, url, isSister) {
   liveUrls.push(url);
   document.getElementById('liveLabel').style.display = 'block';
   document.getElementById('copyAllWrap').style.display = 'flex';
   document.getElementById('logToggleRow').style.display = 'block';
   const w = document.getElementById('logWrap');
-  const el = makeEntry(msg, 'ok', url, true);
+  const el = makeEntry(msg, 'ok', url, true, isSister);
   const first = w.querySelector('.deferred');
   if (first) w.insertBefore(el, first); else w.appendChild(el);
   w.scrollTop = 0;
@@ -286,7 +291,9 @@ async function checkUrl(url, timeoutMs) {
 }
 
 async function loadDomains() {
-  const res = await fetch('https://chaudohoang.github.io/dsj-link-checker/domains.txt?_=' + Date.now());
+  if (!DOMAINS_GIST_URL || DOMAINS_GIST_URL === 'PASTE_YOUR_GIST_RAW_URL_HERE')
+    throw new Error('Gist URL not configured — set DOMAINS_GIST_URL in the script.');
+  const res = await fetch(DOMAINS_GIST_URL + '?_=' + Date.now());
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return (await res.text()).split('\n').map(d=>d.trim()).filter(d=>d&&!d.startsWith('#'));
 }
@@ -336,7 +343,10 @@ async function startScan() {
       const icon = verdict === 'live' ? '✓' : verdict === 'blocked' ? '⚠' : '✗';
       const cls  = verdict === 'live' ? 'ok'  : verdict === 'blocked' ? 'warn' : 'fail';
       allResults.push({url: c.url, verdict});
-      if (verdict === 'live') logLive('✓ ' + c.url.replace('https://',''), c.url);
+      if (verdict === 'live') {
+        const dom = c.url.replace('https://','').split('/')[0];
+        logLive('✓ ' + c.url.replace('https://',''), c.url, sisterDomains.has(dom));
+      }
       else logDeferred(icon + ' [' + verdict + '] ' + c.url, cls, c.url);
 
       if (!winner) {

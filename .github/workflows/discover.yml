@@ -2,8 +2,8 @@ name: Discover DSJ Domains
 
 on:
   schedule:
-    - cron: '0 2 * * *'   # runs daily at 2am UTC
-  workflow_dispatch:        # allows manual trigger from GitHub Actions tab
+    - cron: '0 2 * * *'
+  workflow_dispatch:
 
 jobs:
   discover:
@@ -19,6 +19,6 @@ jobs:
 
       - name: Run domain discovery
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           GIST_ID: ${{ secrets.GIST_ID }}
         run: node discover.js
